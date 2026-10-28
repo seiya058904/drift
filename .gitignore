@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.wrangler/
+.dev.vars*
+.env*
+!.env.example
+test-results/
+playwright-report/
+.test-worker.mjs
+*.sqlite*
+*.sql.enc
+*.backup*
+cloudflare.generated.json
+*.log
