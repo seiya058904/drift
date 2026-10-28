@@ -4,7 +4,33 @@ import {
   assertChecks,
   assertEnvironment,
   assertHead,
+  releaseStages,
 } from "../scripts/gates.mjs";
+
+test("failed backup, failed migration and changed HEAD stop upload", async () => {
+  for (const failure of ["preserve", "migrate", "head"]) {
+    let uploads = 0,
+      headChecks = 0;
+    await assert.rejects(
+      releaseStages({
+        confirmHead: async () => {
+          if (++headChecks === 2 && failure === "head") throw Error("stale");
+        },
+        preserve: async () => {
+          if (failure === "preserve") throw Error("backup failed");
+        },
+        migrate: async () => {
+          if (failure === "migrate") throw Error("migration failed");
+        },
+        deploy: async () => {
+          uploads++;
+          return "uploaded";
+        },
+      }),
+    );
+    assert.equal(uploads, 0);
+  }
+});
 test("release gates reject failed/incomplete/wrong-SHA/spoofed checks and stale heads", () => {
   const check = {
     id: 1,

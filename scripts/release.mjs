@@ -3,7 +3,12 @@ import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { query } from "./cloudflare.mjs";
 import { backup, wrangler } from "./backup.mjs";
-import { assertChecks, assertEnvironment, assertHead } from "./gates.mjs";
+import {
+  assertChecks,
+  assertEnvironment,
+  assertHead,
+  releaseStages,
+} from "./gates.mjs";
 import { checkMigrations } from "./check-migrations.mjs";
 const config = JSON.parse(await readFile("deployment.json", "utf8"));
 const environment = process.argv[2];
@@ -93,39 +98,45 @@ if (!acquired[0].results.length)
   );
 const generated = "cloudflare.generated.json";
 try {
-  await checkHead();
-  if (environment === "production") await backup(config, environment, sha);
-  // Explicit migration target; preview binding is never inferred from a URL.
-  const migrationConfig = {
-    ...wranglerConfig,
-    d1_databases: targetConfig.d1_databases,
-    env: undefined,
-  };
-  await writeFile(generated, JSON.stringify(migrationConfig));
-  wrangler(
-    "d1",
-    "migrations",
-    "apply",
-    "DB",
-    "--remote",
-    "--config",
-    generated,
-  );
-  await checkHead(); // Old builds may never replace a newer main.
-  await writeFile(generated, JSON.stringify(wranglerConfig));
-  const result =
-    environment === "production"
-      ? wrangler("deploy", "--config", generated, "--env", "")
-      : wrangler(
-          "preview",
-          "--config",
-          generated,
-          "--name",
-          previewName,
-          "--message",
-          sha,
-          "--json",
-        );
+  const result = await releaseStages({
+    confirmHead: checkHead,
+    preserve: async () => {
+      if (environment === "production") await backup(config, environment, sha);
+    },
+    migrate: async () => {
+      // Explicit migration target; preview binding is never inferred from a URL.
+      const migrationConfig = {
+        ...wranglerConfig,
+        d1_databases: targetConfig.d1_databases,
+        env: undefined,
+      };
+      await writeFile(generated, JSON.stringify(migrationConfig));
+      wrangler(
+        "d1",
+        "migrations",
+        "apply",
+        "DB",
+        "--remote",
+        "--config",
+        generated,
+      );
+    },
+    deploy: async () => {
+      await writeFile(generated, JSON.stringify(wranglerConfig));
+      return environment === "production"
+        ? wrangler("deploy", "--config", generated, "--env", "")
+        : wrangler(
+            "preview",
+            "--config",
+            generated,
+            "--name",
+            previewName,
+            "--message",
+            sha,
+            "--json",
+          );
+    },
+  });
   console.log(result);
   console.log(
     JSON.stringify({ environment, sha, origin, migration: "0001_initial.sql" }),

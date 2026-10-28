@@ -48,3 +48,16 @@ export function assertChecks(checks, sha, required) {
 export function assertHead(actual, expected) {
   if (actual !== expected) throw Error("Stale build: branch HEAD changed");
 }
+
+export async function releaseStages({
+  confirmHead,
+  preserve,
+  migrate,
+  deploy,
+}) {
+  await confirmHead();
+  await preserve();
+  await migrate();
+  await confirmHead();
+  return deploy();
+}
