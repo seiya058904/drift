@@ -11,11 +11,13 @@
     "lint": "eslint .",
     "test": "node --import tsx --test tests/*.test.ts",
     "test:e2e": "playwright test",
+    "check:docs": "node scripts/check-docs.mjs",
+    "check:migrations": "node scripts/check-migrations.mjs",
     "db:local": "wrangler d1 migrations apply DB --local --env local",
     "release": "node scripts/release.mjs production",
     "release:preview": "node scripts/release.mjs preview",
     "moderate": "node scripts/moderate.mjs",
-    "verify": "npm run typecheck && npm run lint && npm test && npm run build && npm run test:e2e"
+    "verify": "npm run check:docs && npm run typecheck && npm run lint && npm test && npm run check:migrations && npm run test:e2e"
   },
   "dependencies": {
     "@fontsource/cormorant-garamond": "^5.3.0",

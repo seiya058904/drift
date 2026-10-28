@@ -1,6 +1,6 @@
 /* global window, PerformanceObserver, performance */
 import { chromium } from "@playwright/test";
-import { writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 const url = process.argv[2] || "http://127.0.0.1:8787";
 const browser = await chromium.launch();
 const runs = [];
@@ -67,8 +67,9 @@ const report = {
   },
   targets: { interactive: 3000, lcp: 2500, cls: 0.1 },
 };
+await mkdir("artifacts", { recursive: true });
 await writeFile(
-  "docs/evidence/performance.json",
+  "artifacts/performance.json",
   JSON.stringify(report, null, 2),
 );
 console.log(JSON.stringify(report, null, 2));

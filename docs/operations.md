@@ -1,5 +1,7 @@
 # Operations
 
+For local checks, generated files and AI handoff, see [maintenance](maintenance.md). Resource IDs and historical receipts must be verified against live account state before claiming a current deployment.
+
 ## Environments
 
 `deployment.json` records actual resource IDs. Production and preview D1 IDs must differ. Local/CI uses Miniflare or Wrangler local D1 only. The application has no remote seed/reset command. Synthetic fixtures are confined to tests and preview.
@@ -28,6 +30,8 @@ Ordered SQL files are immutable after main. `check-migrations.mjs` compares them
 
 Before every production migration, `backup.mjs` obtains a Time Travel bookmark, exports SQL to a restricted temporary file outside the repository, encrypts it using random AES-256-GCM plus RSA-OAEP SHA-256, uploads it to private KV, reads it back and verifies SHA-256, then removes only that known temporary file. A failure stops migration. KV objects and manifests expire after 7 days. The public encryption key is safe to commit; its private counterpart is held outside the repository under the operator's restricted local storage. Keep an offline protected copy before replacing this machine. Losing that key loses the ability to decrypt these exports.
 
+These encrypted exports are release-triggered; there is no daily backup timer. During periods without releases, verify backup recency rather than assuming seven-day retention guarantees a recent export. A scheduled backup would require separate configuration and verification.
+
 Platform Time Travel has its own retention window determined by the Cloudflare plan; do not confuse it with the 7-day encrypted export retention. Application request logging is disabled; provider infrastructure/security logs follow provider policy. Backup copies may temporarily contain expired sessions until their retention expires.
 
 ## Review
@@ -35,6 +39,8 @@ Platform Time Travel has its own retention window determined by the Cloudflare p
 Run with Cloudflare authorization: `npm run moderate -- production list`, then `npm run moderate -- production hide <exact-id>` or `approve <exact-id>`. In a proxy environment use `node --use-env-proxy scripts/moderate.mjs ...`. The list prints message bodies only to the operator terminal; never run it in CI, paste it into issues, or capture it in public build logs. Read exposure/report counts are operational only and never returned by content APIs.
 
 Rules are deterministic and deliberately small. They catch common links, contact details, repetition, control characters and a short prohibited phrase list in English/Chinese. They do not understand every language or context and are not a complete harmful-content classifier. Rule exceptions leave content pending. Review reports regularly. Session-based reports are not proof of independent people; short-lived sessions and IP limits reduce abuse but cannot defeat distributed attackers.
+
+On 2026-10-29 (Asia/Singapore), the owner explicitly authorized 15 editorial opening bottles: eight Chinese and seven English, signed as Drift opening messages. They passed the current moderation rules and were imported once, with batch marker `editorial_opening_2026_10_29`; normal visitor limits were unchanged. They are intended public content, not test fixtures. The exact-ID receipt is held in the operator's external Drift storage. Future imports or removal need task authorization; do not run bulk seeds or auto-hide this batch during maintenance.
 
 ## Recovery
 
