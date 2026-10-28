@@ -2,6 +2,16 @@
 
 Status: local implementation complete; cloud integration and public verification in progress. No unverified URL is presented as a live site.
 
+## Preview verification update
+
+The Cloudflare connection is repaired. Official build `5c1818e4-3930-412a-a854-41394f598ae2` deployed commit `c61467b241bb092a22fe98d45c884d6d4a5551cc` to [the isolated preview](https://feat-drift-drift.seiya-api.workers.dev). Preview deployment `4da9c745-4803-4d04-a2f7-12728012401e` uses only preview D1 `fb11421f-9bf0-4b68-a09d-58411a5ee032`, migration `0001_initial.sql`, and independent secrets. Production remains undeployed at this checkpoint.
+
+Public two-session submission, author exclusion, opening, plain-text HTML display, report, open deduplication, secure Cookie attributes, Origin/CSRF/content-type guards, API JSON errors, 360/390/768/1440 viewports, Unicode limits and keyboard dismissal passed. [Smoke receipt](evidence/preview-smoke.json). The acceptance bottle was hidden after verification; exposure/report counts were both exactly one. Two earlier synthetic attempts are also hidden: one timestamp was correctly caught by the contact rule, and one test incorrectly expected 404 rather than the valid JSON 405 response for GET on a POST-only API.
+
+A disabled preview URL exposed a release validation bug: echoed `ALLOWED_ORIGIN` text was being mistaken for an enabled public URL. Commit `4f0839107d27924d8300da50116a65a717c50dfa` checks the authoritative Cloudflare URL fields and adds a regression test. Typecheck, lint, five release-gate tests and both hosted CI runs passed. The preview route is now enabled; production remains disabled until its official release.
+
+Workers Builds automatic production builds and the isolated Worker Previews integration are enabled. The earlier records below describe the pre-repair checkpoint.
+
 Workspace: `D:\xia zai\AI project\Project in Iteration\drift`. The original empty `1` directory is held open by the host process; direct rename failed with a Windows sharing violation. It remains empty and was not deleted. Source was created in the new sibling `drift` directory without overwriting anything.
 
 ## Verified locally
