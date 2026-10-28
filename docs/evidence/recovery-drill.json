@@ -1,0 +1,11 @@
+{
+  "date": "2026-10-28T13:17:37.201Z",
+  "database": "1547d085-e3db-4240-ac02-9609f1460373",
+  "name": "drift-recovery-drill",
+  "syntheticOnly": true,
+  "bookmark": "00000000-0000000c-00005112-c04cdcc4235f122dfe7de10e921652e2",
+  "beforeRestore": "after",
+  "afterRestore": "before",
+  "encryptedSnapshotRoundtrip": true,
+  "productionTouched": false
+}
