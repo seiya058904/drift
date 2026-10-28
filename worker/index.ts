@@ -1,4 +1,5 @@
 import { LIMITS, TTL, moderate, normalize, weight } from "./rules";
+import { TurnstileError, turnstileConfig, verifyTurnstile } from "./turnstile";
 
 export interface Env {
   DB: D1Database;
@@ -8,6 +9,8 @@ export interface Env {
   SESSION_SECRET: string;
   IP_SECRET: string;
   WRITES_PAUSED?: string;
+  TURNSTILE_SITE_KEY?: string;
+  TURNSTILE_SECRET?: string;
 }
 type Session = { id: string; csrf: string; expires: number };
 class HttpError extends Error {
@@ -220,6 +223,7 @@ async function submit(
     return json({ id: previous.id, status: previous.status });
   }
   await limit(request, env, session, "submit");
+  await verifyTurnstile(env, body.turnstileToken, "submit_bottle", `${session.id}:${key}:${fingerprint}`);
   let status = "pending",
     reason: string | null = "rule_error";
   try {
@@ -372,6 +376,12 @@ async function report(
       "not_opened",
       "Only a bottle you have opened can be reported.",
     );
+  // An acknowledged report can be retried after a lost response without
+  // consuming a second single-use challenge or recording another report.
+  const prior = await env.DB.prepare("SELECT 1 FROM reports WHERE session_id=? AND bottle_id=?")
+    .bind(session.id, body.id).first();
+  if (prior) return json({ reported: true });
+  await verifyTurnstile(env, body.turnstileToken, "report_bottle", `${session.id}:${body.id}`);
   await env.DB.prepare(
     "INSERT OR IGNORE INTO reports(session_id,bottle_id,created_at) VALUES(?,?,?)",
   )
@@ -410,6 +420,10 @@ export default {
         );
       if (path === "/api/bootstrap" && request.method === "GET")
         return await bootstrap(request, env);
+      if (path === "/api/turnstile" && request.method === "GET") {
+        const { siteKey } = turnstileConfig(env);
+        return json({ siteKey });
+      }
       if (request.method !== "POST")
         throw new HttpError(405, "method", "Use POST for this request.");
       guard(request, env);
@@ -469,7 +483,7 @@ export default {
         "This part of the sea does not exist.",
       );
     } catch (error) {
-      if (error instanceof HttpError)
+      if (error instanceof HttpError || error instanceof TurnstileError)
         return json(
           { error: error.code, message: error.message },
           error.status,

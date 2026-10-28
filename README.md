@@ -16,13 +16,14 @@ A quiet, anonymous sea for a thought, a secret, a little hope. Cast a message in
 - Fold, seal and cast your bottle; watch another drift ashore and unfold. Rituals begin only after API success and can be skipped.
 - Read once per anonymous 24-hour visit. Your own bottles stay out of your draw pool.
 - Report harmful content. Three distinct sessions' reports pause a bottle for local operator review.
+- Managed Cloudflare Turnstile protects sending and reporting. It loads only in those forms; browsing and finding bottles remain challenge-free. Verification errors retain your draft.
 - Ocean sound is opt-in and synthesized locally. Turn atmosphere off, use the keyboard, or rely on your device's reduced-motion preference. Background tabs pause sound and movement.
 
 The watercolor sea and transparent glass bottle were created for Drift. All interface text is native HTML. [Design and asset provenance](docs/design/assets.md).
 
 ## Run locally
 
-Requires Node 24 and npm. No cloud credentials are needed for local development or tests.
+Requires Node 24 and npm. No Cloudflare API credentials are needed for local tests. The local browser suite uses an isolated Siteverify fixture; manual local sending/reporting requires the preview Turnstile secret in ignored `.dev.vars.local` (see [operations](docs/operations.md)).
 
 For AI agents and maintainers: start with [AGENTS.md](AGENTS.md), then use the [maintenance guide](docs/maintenance.md) for scoped checks, artifact handling and release verification.
 
@@ -44,7 +45,7 @@ npm run verify
 
 `verify` is the same gate used by GitHub Actions: documentation paths, typecheck, lint, unit/D1 tests, migration checks and E2E. E2E builds the app and starts an isolated local Worker. Migration checks require `origin/main`; see the maintenance guide if the reference is missing. New screenshots and traces go to ignored `artifacts/e2e/`; reviewed evidence in `docs/evidence/` stays unchanged during routine runs.
 
-Tests use independent local databases. Seven browser flows cover 360, 390, 768 and 1440px, keyboard/focus, Unicode length, plain-text injection protection, independent anonymous contexts, expired draws, cross-tab session renewal, reduced motion and accessibility. Local mobile simulation measured 1.19s to interactive, 2.30s LCP and 0.0075 CLS ([baseline](docs/evidence/performance.json)). After adding a smaller portrait ocean asset, production mobile simulation measured **1.72s interactive, 2.55s LCP and 0.0078 CLS**; LCP narrowly misses the 2.5s target. All three runs, including a 7.26s LCP outlier, are retained in the [production results](docs/evidence/production-performance.json). These cold-cache, throttled Chromium measurements include this workstation's network proxy; they are not physical-device or field measurements.
+Tests use independent local databases. Nine browser flows cover 360, 390, 768 and 1440px, keyboard/focus, Unicode length, plain-text injection protection, independent anonymous contexts, expired draws, cross-tab session renewal, reduced motion, accessibility and verification failure/retry behavior. Local mobile simulation measured 1.19s to interactive, 2.30s LCP and 0.0075 CLS ([baseline](docs/evidence/performance.json)). After adding a smaller portrait ocean asset, production mobile simulation measured **1.72s interactive, 2.55s LCP and 0.0078 CLS**; LCP narrowly misses the 2.5s target. All three runs, including a 7.26s LCP outlier, are retained in the [production results](docs/evidence/production-performance.json). These cold-cache, throttled Chromium measurements include this workstation's network proxy; they are not physical-device or field measurements.
 
 ## Architecture
 
@@ -53,6 +54,7 @@ React + TypeScript + Vite, CSS design tokens, lazy GSAP rituals and native Web A
 | Route | Purpose |
 | --- | --- |
 | `GET /api/bootstrap` | Issue a signed short-lived cookie and bound CSRF token; no database write |
+| `GET /api/turnstile` | Return only the public widget site key, without creating a session |
 | `POST /api/session` | Initialize anonymous session after exact-Origin and CSRF checks |
 | `POST /api/bottles` | Idempotent submission and fail-closed rule moderation |
 | `POST /api/draw` | Weighted candidate selection; return only a five-minute credential |
@@ -61,7 +63,7 @@ React + TypeScript + Vite, CSS design tokens, lazy GSAP rituals and native Web A
 
 D1 stores messages, expiring sessions, draw credentials, deduplication records and rate limits. Sampling traverses every eligible candidate with weight `1 / (1 + exposure_count)^1.5`. D1 triggers ensure concurrent and repeated opens count only once. Exposure counts never reach the browser.
 
-All mutations require POST, JSON, exact Origin and a session-bound CSRF token. Remote cookies use `__Host-`, HttpOnly, Secure, SameSite=Strict and Path=/. Content responses use no-store. Raw IP addresses are not stored; a daily rotating keyed hash supports IP limits. Anonymous session links expire after 24 hours and are cleaned hourly. There is no analytics or persistent fingerprint.
+All mutations require POST, JSON, exact Origin and a session-bound CSRF token. Remote cookies use `__Host-`, HttpOnly, Secure, SameSite=Strict and Path=/. Content responses use no-store. Raw IP addresses are not stored; a daily rotating keyed hash supports IP limits. Anonymous session links expire after 24 hours and are cleaned hourly. Drift has no audience analytics or persistent visitor profile. Turnstile processes browser/network signals for abuse prevention; protected handlers verify success, action and the exact configured hostname before creating a bottle or report.
 
 ## Release, moderation and recovery
 

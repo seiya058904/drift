@@ -8,6 +8,7 @@ import {
 } from "react";
 import { api, ApiError } from "./api";
 import RitualBoundary from "./RitualBoundary";
+import Turnstile from "./Turnstile";
 const Ritual = lazy(() => import("./Ritual"));
 type View =
   | "home"
@@ -76,6 +77,10 @@ export default function App() {
     () => matchMedia("(prefers-reduced-motion: reduce)").matches,
   );
   const [confirmReport, setConfirmReport] = useState(false);
+  const [sendProof, setSendProof] = useState(""),
+    [reportProof, setReportProof] = useState("");
+  const [sendAttempt, setSendAttempt] = useState(0),
+    [reportAttempt, setReportAttempt] = useState(0);
   const dialog = useRef<HTMLDialogElement>(null),
     submitKey = useRef(crypto.randomUUID()),
     drawKey = useRef(crypto.randomUUID()),
@@ -144,18 +149,25 @@ export default function App() {
     }
   }
   async function send() {
+    if (!sendProof) return;
     await perform(async () => {
-      const result = await api<{ status: string }>("bottles", {
-        body: message,
-        requestKey: submitKey.current,
-      });
-      if (result.status !== "approved") {
-        go("held");
-        return;
+      try {
+        const result = await api<{ status: string }>("bottles", {
+          body: message,
+          requestKey: submitKey.current,
+          turnstileToken: sendProof,
+        });
+        if (result.status !== "approved") {
+          go("held");
+          return;
+        }
+        setMessage("");
+        submitKey.current = crypto.randomUUID();
+        go(motion ? "ritual-send" : "sent");
+      } finally {
+        setSendProof("");
+        setSendAttempt((value) => value + 1);
       }
-      setMessage("");
-      submitKey.current = crypto.randomUUID();
-      go(motion ? "ritual-send" : "sent");
     });
   }
   async function find() {
@@ -186,10 +198,16 @@ export default function App() {
     });
   }
   async function report() {
+    if (!reportProof) return;
     await perform(async () => {
-      await api("report", { id: bottle?.id });
-      setReported(true);
-      setConfirmReport(false);
+      try {
+        await api("report", { id: bottle?.id, turnstileToken: reportProof });
+        setReported(true);
+        setConfirmReport(false);
+      } finally {
+        setReportProof("");
+        setReportAttempt((value) => value + 1);
+      }
     });
   }
   async function toggleSound() {
@@ -359,9 +377,10 @@ export default function App() {
               <p className="form-note">
                 Keep names, contact details and links ashore.
               </p>
+              <Turnstile key={`send-${sendAttempt}`} action="submit_bottle" onToken={setSendProof} busy={busy} />
               <button
                 className="button ink full"
-                disabled={busy || !message.trim() || count > 500}
+                disabled={busy || !message.trim() || count > 500 || !sendProof}
                 type="submit"
               >
                 {busy ? "Entrusting your words…" : "Seal & send"}
@@ -428,16 +447,18 @@ export default function App() {
               {confirmReport ? (
                 <div className="report-confirm">
                   <p>Does this message feel harmful or unwanted?</p>
+                  <Turnstile key={`report-${reportAttempt}`} action="report_bottle" onToken={setReportProof} busy={busy} />
                   <button
                     className="text-button"
                     onClick={report}
-                    disabled={busy}
+                    disabled={busy || !reportProof}
                   >
                     {busy ? "Reporting…" : "Report this bottle"}
                   </button>
                   <button
                     className="text-button"
                     onClick={() => setConfirmReport(false)}
+                    disabled={busy}
                   >
                     Cancel
                   </button>
@@ -544,8 +565,9 @@ export default function App() {
                   A secure, essential cookie lasts 24 hours. It helps prevent
                   repeats and abuse. Session links, reading and report
                   deduplication records are removed after 24 hours, at the next
-                  hourly cleanup. We never show reading counts. No analytics,
-                  persistent fingerprint or advertising trackers are used.
+                  hourly cleanup. We never show reading counts. Drift does not
+                  use audience analytics, advertising trackers or a persistent
+                  visitor profile.
                 </p>
                 <p>
                   We do not store raw IP addresses. A daily rotating keyed hash
@@ -554,6 +576,15 @@ export default function App() {
                   message already sent.
                 </p>
                 <h3>Beyond the shoreline.</h3>
+                <p>
+                  Cloudflare Turnstile checks your browser when you open the
+                  writing or report form to help prevent automated abuse. It
+                  processes browser and network signals under Cloudflare’s{" "}
+                  <a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noreferrer">privacy policy</a>.
+                  Home, finding and reading do not require this check. Tokens
+                  are short-lived; Drift does not store them. Verification
+                  never receives your message text.
+                </p>
                 <p>
                   Cloudflare handles requests and may retain infrastructure or
                   security logs under its own policies. Application request

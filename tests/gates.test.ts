@@ -33,6 +33,12 @@ test("checked-in release configuration parses and isolates both remote databases
   );
   assert.equal(worker.vars.APP_ENV, "production");
   assert.equal(worker.previews.vars.APP_ENV, "preview");
+  assert.match(worker.vars.TURNSTILE_SITE_KEY, /^0x4/);
+  assert.match(worker.previews.vars.TURNSTILE_SITE_KEY, /^0x4/);
+  assert.notEqual(worker.vars.TURNSTILE_SITE_KEY, worker.previews.vars.TURNSTILE_SITE_KEY);
+  assert.equal(worker.main, "worker/index.ts");
+  assert.equal(worker.vars.TURNSTILE_SECRET, undefined);
+  assert.equal(worker.previews.vars.TURNSTILE_SECRET, undefined);
 });
 
 test("failed backup, failed migration and changed HEAD stop upload", async () => {

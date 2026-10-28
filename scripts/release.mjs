@@ -87,6 +87,15 @@ assertEnvironment(
 );
 if (environment === "preview")
   wranglerConfig.previews.vars.ALLOWED_ORIGIN = origin;
+if (!/^0x4[A-Za-z0-9_-]+$/.test(targetConfig.vars?.TURNSTILE_SITE_KEY || "") ||
+    wranglerConfig.vars.TURNSTILE_SITE_KEY === wranglerConfig.previews.vars.TURNSTILE_SITE_KEY)
+  throw Error("Production and preview require separate real Turnstile site keys");
+const secretNames = environment === "production"
+  ? (await cloudflare("workers/scripts/drift/secrets")).map((binding) => binding.name)
+  : Object.entries((await cloudflare("workers/workers/drift")).previews_base_config?.env || {})
+    .filter(([, binding]) => binding.type === "secret_text").map(([name]) => name);
+if (!secretNames.includes("TURNSTILE_SECRET"))
+  throw Error(`Turnstile secret is missing from ${environment}; refuse publication`);
 // A separate operational D1 holds an atomic lock. It contains no user messages.
 // Locks never expire automatically: a killed build cannot later overtake another release.
 const owner = `${sha}:${randomUUID()}`;
