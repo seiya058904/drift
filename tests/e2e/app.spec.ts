@@ -1,5 +1,52 @@
 import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
+
+test("an older tab can retry after another tab renews the shared session", async ({ page, context }) => {
+  await page.goto("/");
+  const initial = page.waitForResponse((r) => r.url().endsWith("/api/draw"));
+  await page.getByRole("button", { name: "Find a bottle" }).click();
+  expect((await initial).status()).toBe(200);
+  await page.keyboard.press("Escape");
+  // Expiration removes the shared cookie, while the first tab retains its CSRF token.
+  await context.clearCookies();
+  const newer = await context.newPage();
+  await newer.goto("/");
+  const renewed = newer.waitForResponse((r) => r.url().endsWith("/api/draw"));
+  await newer.getByRole("button", { name: "Find a bottle" }).click();
+  expect((await renewed).status()).toBe(200);
+  await page.getByRole("button", { name: "Find a bottle" }).click();
+  await expect(page.getByRole("alert")).toContainText("Refresh your visit");
+  const retried = page.waitForResponse((r) => r.url().endsWith("/api/draw"));
+  await page.getByRole("button", { name: "Find a bottle" }).click();
+  expect((await retried).status()).toBe(200);
+  await expect(page.getByRole("alert")).toHaveCount(0);
+  await newer.close();
+});
+
+test("finding again recovers from an expired abandoned credential", async ({ page }) => {
+  const keys: string[] = [];
+  await page.route("**/api/draw", (route) => {
+    keys.push(route.request().postDataJSON().requestKey);
+    return route.fulfill({
+      status: keys.length === 2 ? 410 : 200,
+      contentType: "application/json",
+      body: JSON.stringify(keys.length === 1 ? { token: "unopened" } : keys.length === 2
+        ? { error: "expired", message: "This bottle drifted away. Try again." }
+        : { empty: true }),
+    });
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Find a bottle" }).click();
+  await expect(page.getByRole("heading", { name: "A bottle found you." })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: "Find a bottle" }).click();
+  await expect(page.getByRole("alert")).toContainText("This bottle drifted away");
+  await page.getByRole("button", { name: "Find a bottle" }).click();
+  await expect(page.getByText("The sea is quiet")).toBeVisible();
+  expect(keys[1]).toBe(keys[0]);
+  expect(keys[2]).not.toBe(keys[1]);
+});
+
 test("desktop and mobile composition, keyboard, zoom, long Unicode draft, accessibility", async ({
   page,
 }) => {

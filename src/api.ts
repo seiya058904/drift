@@ -42,7 +42,10 @@ async function fetchJson<T>(
     message: string;
   };
   if (!response.ok) {
-    if (response.status === 401) {
+    if (
+      response.status === 401 ||
+      (response.status === 403 && result.error === "csrf")
+    ) {
       csrf = "";
       sessionPromise = undefined;
     }

@@ -6,7 +6,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { api } from "./api";
+import { api, ApiError } from "./api";
 import RitualBoundary from "./RitualBoundary";
 const Ritual = lazy(() => import("./Ritual"));
 type View =
@@ -162,6 +162,10 @@ export default function App() {
     await perform(async () => {
       const result = await api<{ token?: string; empty?: boolean }>("draw", {
         requestKey: drawKey.current,
+      }).catch((err: unknown) => {
+        if (err instanceof ApiError && err.code === "expired")
+          drawKey.current = crypto.randomUUID();
+        throw err;
       });
       if (result.empty) {
         drawKey.current = crypto.randomUUID();
