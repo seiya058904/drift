@@ -1,0 +1,27 @@
+{
+  "environment": "production",
+  "origin": "https://drift.seiya-api.workers.dev",
+  "measuredAt": "2026-10-28T15:38:59.751Z",
+  "browser": "Chromium on Windows; mobile viewport simulation, not a physical phone",
+  "bottleId": "b53867ba206ee6238cec06342f8f12c1",
+  "checks": {
+    "identity": true,
+    "submit": true,
+    "authorExcluded": true,
+    "crossSessionOpenPlainText": true,
+    "secureCookie": true,
+    "report": true,
+    "openDedup": true,
+    "originCsrfContentTypeAndApiErrors": true,
+    "responsiveUnicodeAndKeyboard": true
+  },
+  "consoleErrors": [],
+  "hidden": true,
+  "passed": true,
+  "sourceSha": "bf90da3722684099602cafac8a4a24aeab9a3eac",
+  "databaseVerification": {
+    "exposure_count": 1,
+    "report_count": 1,
+    "status": "hidden"
+  }
+}

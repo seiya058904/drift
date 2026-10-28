@@ -1,45 +1,61 @@
 # Delivery evidence
 
-Status: local implementation complete; cloud integration and public verification in progress. No unverified URL is presented as a live site.
+**Live:** https://drift.seiya-api.workers.dev — public production verification passed on October 28, 2026 (Asia/Singapore). Source: [seiya058904/drift](https://github.com/seiya058904/drift). The GitHub About Website points to the verified production URL.
 
-## Preview verification update
+## Verified production release
 
-The Cloudflare connection is repaired. Official build `5c1818e4-3930-412a-a854-41394f598ae2` deployed commit `c61467b241bb092a22fe98d45c884d6d4a5551cc` to [the isolated preview](https://feat-drift-drift.seiya-api.workers.dev). Preview deployment `4da9c745-4803-4d04-a2f7-12728012401e` uses only preview D1 `fb11421f-9bf0-4b68-a09d-58411a5ee032`, migration `0001_initial.sql`, and independent secrets. Production remains undeployed at this checkpoint.
+| Item | Evidence |
+| --- | --- |
+| Application source | `bf90da3722684099602cafac8a4a24aeab9a3eac`, protected squash merge of [PR #1](https://github.com/seiya058904/drift/pull/1) |
+| Required main CI | [40717488365](https://github.com/seiya058904/drift/actions/runs/40717488365), passed typecheck, lint, 19 unit/D1/security/release tests, migrations, build and 7 browser flows |
+| Official Git build | `995f067a-ec3a-417a-b90b-f9c10392c4ba`, automatically triggered by the main push, succeeded |
+| Worker deployment | `bf4a5b1e-fe7d-41cc-aca8-667c6e9507da` |
+| Worker version | `0d8d3e9c-5c9c-4283-8064-a391cc65827d`, 100% traffic |
+| Production D1 | `bbf016b2-a18b-46a7-ab10-79ac011bb2f1`, `0001_initial.sql` |
+| Cleanup schedule | `17 * * * *` |
+| Pre-migration backup | Encrypted export uploaded and read back from private KV, 645 bytes; bookmark and seven-day retention manifest remain in private storage |
+| Public smoke | [Receipt](evidence/production-smoke.json); two independent browser contexts passed |
+| Acceptance bottle | `b53867ba206ee6238cec06342f8f12c1`, hidden after verification; exposure_count=1, report_count=1 |
 
-Public two-session submission, author exclusion, opening, plain-text HTML display, report, open deduplication, secure Cookie attributes, Origin/CSRF/content-type guards, API JSON errors, 360/390/768/1440 viewports, Unicode limits and keyboard dismissal passed. [Smoke receipt](evidence/preview-smoke.json). The acceptance bottle was hidden after verification; exposure/report counts were both exactly one. Two earlier synthetic attempts are also hidden: one timestamp was correctly caught by the contact rule, and one test incorrectly expected 404 rather than the valid JSON 405 response for GET on a POST-only API.
+This records the first verified application deployment. Follow-up release-safety and documentation commits use the same protected PR, exact-SHA CI and official Git build path; their current status is visible in GitHub and Cloudflare.
 
-A disabled preview URL exposed a release validation bug: echoed `ALLOWED_ORIGIN` text was being mistaken for an enabled public URL. Commit `4f0839107d27924d8300da50116a65a717c50dfa` checks the authoritative Cloudflare URL fields and adds a regression test. Typecheck, lint, five release-gate tests and both hosted CI runs passed. The preview route is now enabled; production remains disabled until its official release.
+## Preview and release safeguards
 
-Workers Builds automatic production builds and the isolated Worker Previews integration are enabled. The earlier records below describe the pre-repair checkpoint.
+- Production and preview D1 IDs are distinct; preview uses `fb11421f-9bf0-4b68-a09d-58411a5ee032`. Independent production and preview SESSION_SECRET/IP_SECRET bindings are provisioned.
+- [PR #1 preview](https://feat-drift-drift.seiya-api.workers.dev) used one exact Origin. Automatic build `9b256458-c181-44cf-b913-b107606213b5` passed for `fb77dd72fbe3dd08d3466f28e8d0703bfdd3b74e`. Cloudflare posted the actual preview URL on the PR.
+- [Preview smoke receipt](evidence/preview-smoke.json) covers two sessions and real D1. All three synthetic preview bottles are hidden. One preliminary message's numeric timestamp was caught by the contact rule; another test expectation was corrected to accept the API's JSON 405 for GET on a POST-only endpoint.
+- The production database received only one acceptance bottle, through the public UI. No seed, reset or test dataset was run against production.
+- Main requires an up-to-date PR and GitHub Actions `verify`, with administrator enforcement. Actions verifies only; Cloudflare Git builds deploy.
+- Stale-build rejection was observed in real build `f446cbd5-f180-4315-acbe-3d7402aa45ff`, which stopped before publication after its branch HEAD moved.
+- A disabled preview route revealed that an echoed Origin was insufficient deployment proof. The release now checks authoritative enabled URL fields; the regression rejects empty URLs and echoed bindings.
+- The first production clone lacked `origin/main`. CI had independently verified migrations, and the initial production schema was empty. The follow-up release fetches the baseline explicitly and refuses a missing baseline; its regression verifies failure without a Git reference. Local typecheck, lint, six release/migration gate tests and the one-file upgrade check passed.
+- Production uses a separate operations database for atomic release locks. Failed backups, migrations, checks or changed HEAD prevent publication. No paid plan or domain purchase was enabled.
 
-Workspace: `D:\xia zai\AI project\Project in Iteration\drift`. The original empty `1` directory is held open by the host process; direct rename failed with a Windows sharing violation. It remains empty and was not deleted. Source was created in the new sibling `drift` directory without overwriting anything.
+## Browser and security validation
 
-## Verified locally
+The public flow was home -> write -> successful send -> independent visitor finds and opens -> report -> no second draw of the same bottle. Author exclusion, plain-text HTML display, secure host-only Cookie attributes, JSON/no-store API errors, exact-Origin rejection, missing CSRF rejection, incorrect content type, 500-character Unicode limits and keyboard dismissal passed. Viewports: 360, 390, 768 and 1440 pixels. Production smoke captured no JavaScript or console errors.
 
-- TypeScript, ESLint, production build.
-- 18 unit/integration cases: moderation/Unicode, weighted distribution (100,000 seeded samples), a >500-row pool, author/open exclusion, expiration, revalidation, idempotency, simultaneous duplicate text, eight concurrent opens, report threshold/dedup, session+IP rate limits, Origin/CSRF/content-type/cookie checks, scheduled cleanup, backup cryptography and release gates including failed backup/migration suppression. A regression check parses the actual checked-in release configuration and verifies production/preview database isolation; formatting preserves strict JSON compatibility.
-- 5 Playwright flows: responsive layout at 360/390/768/1440, keyboard Escape/focus return, 200% zoom, long Unicode text, WCAG AA automated checks in composer, two independent anonymous contexts, plain text injection, API errors preserving drafts, reduced motion, sound/atmosphere controls, success-gated rituals, live reduced-motion changes and optional animation download failure. The final fifth case passed on GitHub Actions; local browser suites were stopped to reduce workstation load.
-- Chrome extension browser: local page identity and rendered content confirmed, Cast a bottle opens composer, no relevant console errors. Automated repeatable multi-context tests use project Playwright as requested by the plan.
-- `view_image` inspection of concept, desktop/mobile home and mobile composer: consistent headline, action hierarchy, palette, painted ocean, lower-right bottle, paper texture/spacing and mobile stacking. Added helper text and flat paper edge are documented design adaptations. Homepage copy matches reference.
-- Fixed mobile simulation: 390×844 @1x, 4× CPU slowdown, cold cache, 1.6Mbps down / 750Kbps up / 150ms latency, three runs. Median interactive 1189ms, LCP 2304ms, CLS 0.00748. [Raw results](evidence/performance.json).
-- Private KV encrypted backup upload/readback verified; pre-migration production bookmark retained in private backup manifest. No SQL export or private key committed.
-- Isolated remote D1 restore rehearsal passed: synthetic value `after` restored to `before`. [Evidence](evidence/recovery-drill.json). Production was not restored.
-- Local workerd capacity profiling at 0/100/1000/5000 eligible bottles: 5/6/8/16 D1 statements and 6/205/2006/10006 rows read per draw. Sampled active V8 time was 9.79/15.67/21.17/43.12ms per draw including the local runtime and measurement wrapper. This is not hosted CPU billing or a guarantee of free-tier capacity. [Raw results](evidence/capacity.json).
+The automated seven-flow suite additionally covers 200% zoom, WCAG AA automated checks, retained drafts after failed submission, API-gated and skippable rituals, optional animation download failure, live reduced-motion changes, audio/atmosphere controls, a real shared-cookie renewal across tabs and recovery from expired draws. Both automated PR review findings were fixed and resolved after CI passed.
 
-## Release record
+Browser plugin was unavailable; the existing project Playwright installation was used. These are Chromium browser simulations on Windows and hosted Chromium on Ubuntu, not physical phone tests. The real production desktop and mobile screenshots were visually inspected for composition, wrapping, readable paper text and clipping. The smaller mobile ocean preserves the painted scene while avoiding offscreen landscape transfer.
 
-- Verified application source: `b281a83992faa7635c32327fbae4193f07a960a2` on `feat/drift`, [PR #1](https://github.com/seiya058904/drift/pull/1). Later documentation-only commits may follow this record.
-- [Push checks passed](https://github.com/seiya058904/drift/actions/runs/40702308260); [PR checks passed](https://github.com/seiya058904/drift/actions/runs/40702322956). Typecheck, lint, 18 unit/integration tests, migration gates, build and all 5 browser flows passed on Ubuntu 24.04 / Node 24.
-- `main` requires PRs, the GitHub Actions `verify` check and an up-to-date branch; admin enforcement is enabled. No application code has bypassed those rules.
-- Cloudflare login works and isolated production, preview, operations and recovery-drill databases plus the private backup namespace exist. The empty `drift` Worker resource has ID `2c5e99c6be884c1aba7d21f15d71e50b`; it has no deployed version and both public/preview URLs are disabled. **Not yet online.**
-- GitHub installation was verified as limited to `seiya058904/drift`, but Cloudflare's connection API returned error `8000008` (Git account disconnected). The official connection is being repaired before any app deployment. A separately approved, private local setup token grants only Workers Builds Configuration edit on the selected Cloudflare account and expires on October 29, 2026; it is not in this repository or build logs.
-- Production/preview migrations, build/deployment IDs, real preview/production URLs and production smoke bottle IDs remain pending. No production test dataset has been inserted and GitHub About has no unverified Website URL.
-- Local dev server and its four Node/workerd processes were stopped at the user's request, releasing about 274MB of observed process working sets. The local preview browser tab was closed; unrelated programs were left alone. Further full checks run in hosted CI where possible.
-- Cloud configuration now uses a separate Playwright browser at the user's explicit request. The Chrome extension path repeatedly failed to complete the connection/dialog flow; it is no longer used. The independent Playwright profile requires its own interactive sign-in and is kept outside the repository under restricted local storage.
+## Performance and capacity
 
-## Remaining validation
+| Measurement | Interactive | LCP | CLS |
+| --- | ---: | ---: | ---: |
+| Earlier local baseline | 1.19 s | 2.30 s | 0.0075 |
+| Optimized public preview | 1.93 s | 2.70 s | 0.0075 |
+| Production | 1.72 s | 2.55 s | 0.0078 |
+| Target | <3 s | <=2.5 s | <0.1 |
 
-- Repair the Cloudflare Git account connection and configure official production/preview builds.
-- Exact remote preview origin/binding verification, public two-session smoke, deployment ID and current main parity.
-- Real phone/soft keyboard and physical desktop hardware beyond this Windows workstation. Browser emulation is not claimed as physical-device verification.
-- Worker CPU/reads at realistic production scale. The initial production database is empty; sampling cost grows with every eligible bottle and must be monitored. No paid tier has been enabled.
+Three cold-cache runs per measurement: 390x844 @1x, 4x CPU slowdown, 1.6 Mbps down / 750 Kbps up / 150 ms simulated latency. Public measurements include the workstation's local network proxy. Production LCP misses its target by 52 ms; one run had a 7.26-second LCP and remains in the raw evidence. No field-performance guarantee is claimed. [Production raw results](evidence/production-performance.json), [preview results](evidence/preview-performance.json), [local baseline](evidence/performance.json).
+
+Portrait ocean transfer fell from 316,632 to 104,772 bytes; observed total initial transfer fell from about 531 KB to 319 KB. Desktop art is unchanged.
+
+[Local capacity profiling](evidence/capacity.json) measured 5/6/8/16 D1 statements and 6/205/2006/10006 rows read at 0/100/1000/5000 eligible bottles. Sampled V8 time includes the local wrapper and is not hosted CPU billing. Sampling is O(N); hosted CPU/read capacity at a large real pool remains unverified, and no paid upgrade was made.
+
+## Recovery and remaining limits
+
+The [isolated remote Time Travel rehearsal](evidence/recovery-drill.json) restored synthetic data successfully. Production was never restored. Encrypted backups, private key handling, seven-day retention, destructive restore approvals, moderation commands and privacy limitations are documented in [operations](operations.md).
+
+Remaining: physical phone/soft-keyboard testing, field performance across devices/networks, larger-pool hosted CPU/read profiling, and ongoing human review of reported content. Rule-based moderation and anonymous session limits do not establish verified identity or eliminate distributed abuse.

@@ -1,0 +1,39 @@
+{
+  "url": "https://drift.seiya-api.workers.dev",
+  "measuredAt": "2026-10-28T15:39:13.644Z",
+  "browser": "Chromium, simulated mobile (not a physical device)",
+  "viewport": "390x844 @1x",
+  "network": "1.6 Mbps down, 750 Kbps up, 150 ms latency; cold cache",
+  "cpuSlowdown": 4,
+  "proxy": "Local network proxy; remote connection overhead is included",
+  "runs": [
+    {
+      "lcp": 2552,
+      "cls": 0.007476509707821546,
+      "interactive": 1724.699999999255,
+      "transferred": 319112
+    },
+    {
+      "lcp": 2248,
+      "cls": 0.007800065176495505,
+      "interactive": 1401.5,
+      "transferred": 319098
+    },
+    {
+      "lcp": 7260,
+      "cls": 0.007824698039357975,
+      "interactive": 6419.699999999255,
+      "transferred": 319097
+    }
+  ],
+  "median": {
+    "interactive": 1724.699999999255,
+    "lcp": 2552,
+    "cls": 0.007800065176495505
+  },
+  "targets": {
+    "interactive": 3000,
+    "lcp": 2500,
+    "cls": 0.1
+  }
+}
