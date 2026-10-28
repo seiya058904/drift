@@ -18,6 +18,8 @@ Cloudflare's build token needs Workers Scripts edit, D1 edit (production, previe
 
 The Preview block explicitly binds preview D1. Each build sets one exact preview origin from the normalized branch name (`https://<branch>-drift.seiya-api.workers.dev`), never `*.workers.dev`. Confirm the returned actual URL equals the configured origin. Preview base secrets must be independent of production secrets. Fork PRs must not receive build credentials; review and copy to a trusted branch before previewing. For incompatible schema work, provision an isolated preview database and update both binding and migration target; if quota is unavailable, block that preview.
 
+After creating the Worker resource, run `node scripts/provision-secrets.mjs` once with the operator's restricted secret file. It uploads independent production and Preview base secrets through Wrangler stdin, without logging values. This is infrastructure configuration; app publication still belongs exclusively to official Git builds.
+
 ## Migrations and backups
 
 Ordered SQL files are immutable after main. `check-migrations.mjs` compares them with main, creates an empty database, and tests an upgrade with retained data. Ordinary releases refuse destructive SQL. Use expand, backfill and contract phases; contraction is an explicit separate operation.

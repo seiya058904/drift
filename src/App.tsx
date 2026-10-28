@@ -7,6 +7,7 @@ import {
   useState,
 } from "react";
 import { api } from "./api";
+import RitualBoundary from "./RitualBoundary";
 const Ritual = lazy(() => import("./Ritual"));
 type View =
   | "home"
@@ -107,7 +108,8 @@ export default function App() {
   useEffect(() => {
     const element = dialog.current;
     if (view !== "home" && element && !element.open) {
-      returnFocus.current = document.activeElement as HTMLElement;
+      if (!returnFocus.current?.isConnected)
+        returnFocus.current = document.activeElement as HTMLElement;
       element.showModal();
     }
     if (view === "home" && element?.open) {
@@ -248,12 +250,22 @@ export default function App() {
           <div className="home-actions">
             <button
               className="button primary"
-              onClick={() => go("write")}
+              onClick={(event) => {
+                returnFocus.current = event.currentTarget;
+                go("write");
+              }}
               disabled={busy}
             >
               Cast a bottle
             </button>
-            <button className="button secondary" onClick={find} disabled={busy}>
+            <button
+              className="button secondary"
+              onClick={(event) => {
+                returnFocus.current = event.currentTarget;
+                void find();
+              }}
+              disabled={busy}
+            >
               {busy && view === "home"
                 ? "Listening to the sea…"
                 : "Find a bottle"}
@@ -275,7 +287,13 @@ export default function App() {
           No names. No replies.
           <span className="mobile-break" /> Just a moment shared.
         </span>
-        <button className="text-button" onClick={() => go("about")}>
+        <button
+          className="text-button"
+          onClick={(event) => {
+            returnFocus.current = event.currentTarget;
+            go("about");
+          }}
+        >
           About &amp; privacy
         </button>
       </footer>
@@ -385,7 +403,12 @@ export default function App() {
               <div className="ornament" aria-hidden="true">
                 <span />✧<span />
               </div>
-              <blockquote className="message-body" dir="auto">
+              <blockquote
+                className="message-body"
+                dir="auto"
+                tabIndex={0}
+                aria-label="Bottle message"
+              >
                 {bottle.body}
               </blockquote>
               <div className="message-meta">
@@ -559,26 +582,37 @@ export default function App() {
                   ? "Your bottle is on its way"
                   : "Your bottle is opening"}
               </h2>
-              <Suspense
+              <RitualBoundary
                 fallback={
-                  <div className="centered">
-                    <p>A small moment, just for you.</p>
-                    <button
-                      className="button primary"
-                      onClick={() =>
-                        go(view === "ritual-send" ? "sent" : "read")
-                      }
-                    >
-                      Continue
-                    </button>
-                  </div>
+                  <button
+                    className="button primary"
+                    onClick={() => go(view === "ritual-send" ? "sent" : "read")}
+                  >
+                    Continue
+                  </button>
                 }
               >
-                <Ritual
-                  kind={view === "ritual-send" ? "send" : "open"}
-                  onDone={() => go(view === "ritual-send" ? "sent" : "read")}
-                />
-              </Suspense>
+                <Suspense
+                  fallback={
+                    <div className="centered">
+                      <p>A small moment, just for you.</p>
+                      <button
+                        className="button primary"
+                        onClick={() =>
+                          go(view === "ritual-send" ? "sent" : "read")
+                        }
+                      >
+                        Continue
+                      </button>
+                    </div>
+                  }
+                >
+                  <Ritual
+                    kind={view === "ritual-send" ? "send" : "open"}
+                    onDone={() => go(view === "ritual-send" ? "sent" : "read")}
+                  />
+                </Suspense>
+              </RitualBoundary>
             </>
           ) : null}
           {view !== "home" && error ? (

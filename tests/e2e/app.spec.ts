@@ -96,8 +96,25 @@ test("two anonymous visitors submit, find, open plain text and report; actual AP
   await expect(
     b.getByText("Thank you. Your report has been received."),
   ).toBeVisible();
+  await b.keyboard.press("Escape");
+  await expect(b.getByRole("button", { name: "Find a bottle" })).toBeFocused();
   await author.close();
   await reader.close();
+});
+
+test("an unavailable optional animation still lets the visitor read the opened bottle", async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.route(/\/assets\/Ritual-[^/]+\.js$/, (route) => route.abort());
+  await page.goto("/");
+  await page.getByRole("button", { name: "Find a bottle" }).click();
+  await page.getByRole("button", { name: "Open the bottle" }).click();
+  await expect(
+    page.getByRole("button", { name: "Continue", exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
+  await expect(page.locator("blockquote")).toBeVisible();
 });
 test("failed submission keeps draft, never plays success; toggles respond", async ({
   page,

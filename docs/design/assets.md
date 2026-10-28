@@ -8,4 +8,4 @@
 - Cormorant Garamond and Inter: Fontsource packages, SIL Open Font License; see packaged LICENSE files. Fonts are delivered from this site's origin.
 - Audio: original procedurally synthesized filtered noise with a slow amplitude swell. Created on explicit user activation; no external media request.
 
-The exact concept generation brief and asset-edit prompts are recorded in the task conversation. All project-consumed assets live in the workspace; none depend on the generation tool's external save directory.
+The exact concept generation brief is also saved in [concept-prompt.txt](concept-prompt.txt); asset-edit prompts are recorded in the task conversation and summarized above. All project-consumed assets live in the workspace; none depend on the generation tool's external save directory.

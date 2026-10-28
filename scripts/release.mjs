@@ -138,6 +138,10 @@ try {
     },
   });
   console.log(result);
+  if (!result.includes(origin))
+    throw Error(
+      "Cloudflare returned an unexpected URL; verify exact Origin before accepting this deployment",
+    );
   console.log(
     JSON.stringify({ environment, sha, origin, migration: "0001_initial.sql" }),
   );

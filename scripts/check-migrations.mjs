@@ -6,6 +6,10 @@ export async function checkMigrations() {
     .filter((f) => f.endsWith(".sql"))
     .sort();
   if (!files.length) throw Error("No migrations");
+  files.forEach((file, index) => {
+    if (!file.startsWith(String(index + 1).padStart(4, "0") + "_"))
+      throw Error(`Migration sequence must be contiguous: ${file}`);
+  });
   const database = new DatabaseSync(":memory:");
   let previousFiles = [];
   try {
@@ -27,6 +31,10 @@ export async function checkMigrations() {
     if (previous !== (await readFile(path, "utf8")))
       throw Error(`Applied migration changed: ${path}`);
   }
+  if (
+    previousFiles.some((path, index) => path !== `migrations/${files[index]}`)
+  )
+    throw Error("New migrations must follow the previously applied prefix");
   for (const file of files) {
     const sql = await readFile(`migrations/${file}`, "utf8");
     if (
