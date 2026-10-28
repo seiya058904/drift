@@ -1,6 +1,5 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-// @ts-expect-error Build scripts are executable JavaScript, exercised directly.
 import {
   assertChecks,
   assertEnvironment,
