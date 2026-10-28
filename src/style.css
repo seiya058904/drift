@@ -79,6 +79,11 @@ h2:focus {
   z-index: -3;
   background: #182d3e url("/art/ocean.webp") center 58% / cover no-repeat;
 }
+@media (max-width: 600px) and (orientation: portrait) {
+  .seascape {
+    background-image: url("/art/ocean-mobile.webp");
+  }
+}
 .sea-sheen {
   position: absolute;
   inset: 60% 0 0;

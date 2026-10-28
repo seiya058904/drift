@@ -4,6 +4,7 @@
 - `ocean-source.png`: built-in image_gen edit of the concept. Prompt: recreate the top-left background as a standalone landscape, horizon at 58%, quiet dark sky, tiny left lighthouse, lower-left rocks, right distant island; preserve painterly gouache/watercolor; no text, UI or bottle.
 - `bottle-source.png`: built-in image_gen edit of the concept, transparent background requested. Prompt: extract one luminous glass message bottle, rolled ivory note and cork, angled right, warm reflections, tiny transparent droplets; no scene, UI or lettering; preserve painterly style.
 - `public/art/ocean.webp`, `bottle.webp`: optimized copies of those assets via `node scripts/assets.mjs`. Sources remain in this repository. No third-party stock photography.
+- `public/art/ocean-mobile.webp`: a 600x1298 center-cover derivative of the same ocean source, served only to portrait viewports up to 600px. It avoids transferring the landscape area that is cropped offscreen on phones; desktop and landscape keep the original asset.
 - `public/art/paper.svg`, `favicon.svg`: original code-native texture and typographic mark.
 - Cormorant Garamond and Inter: Fontsource packages, SIL Open Font License; see packaged LICENSE files. Fonts are delivered from this site's origin.
 - Audio: original procedurally synthesized filtered noise with a slow amplitude swell. Created on explicit user activation; no external media request.
