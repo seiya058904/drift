@@ -1,0 +1,39 @@
+{
+  "date": "2026-10-28T13:28:57.570Z",
+  "environment": "Local workerd/Miniflare, synthetic isolated D1; no production data",
+  "method": "V8 CPU profiler at 100us; 1 warmup + 10 draws per size; D1 result metadata counted. Active samples exclude idle/program. This is sampled JS cost, not billed hosted Worker CPU.",
+  "results": [
+    {
+      "eligibleBottles": 0,
+      "requests": 10,
+      "activeV8SampledMsPerDraw": 9.7899,
+      "averageWallMs": 13.895190000000014,
+      "queriesPerDraw": 5,
+      "rowsReadPerDraw": 6
+    },
+    {
+      "eligibleBottles": 100,
+      "requests": 10,
+      "activeV8SampledMsPerDraw": 15.6714,
+      "averageWallMs": 17.41950000000004,
+      "queriesPerDraw": 6,
+      "rowsReadPerDraw": 205
+    },
+    {
+      "eligibleBottles": 1000,
+      "requests": 10,
+      "activeV8SampledMsPerDraw": 21.1663,
+      "averageWallMs": 23.141050000000043,
+      "queriesPerDraw": 8,
+      "rowsReadPerDraw": 2006
+    },
+    {
+      "eligibleBottles": 5000,
+      "requests": 10,
+      "activeV8SampledMsPerDraw": 43.1171,
+      "averageWallMs": 47.51544000000049,
+      "queriesPerDraw": 16,
+      "rowsReadPerDraw": 10006
+    }
+  ]
+}

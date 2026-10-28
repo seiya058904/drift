@@ -129,3 +129,47 @@ test("failed submission keeps draft, never plays success; toggles respond", asyn
   );
   await expect(page.locator(".ritual")).toHaveCount(0);
 });
+
+test("ritual waits for API success, can be skipped, and opens with motion", async ({
+  browser,
+}) => {
+  const author = await browser.newContext({ reducedMotion: "no-preference" });
+  const page = await author.newPage();
+  let release!: () => void;
+  const hold = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route("**/api/bottles", async (route) => {
+    await hold;
+    await route.continue();
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Cast a bottle" }).click();
+  await page
+    .getByLabel("Your message")
+    .fill("May the next wave bring something kind.");
+  await page.getByRole("button", { name: "Seal & send" }).click();
+  await expect(
+    page.getByRole("button", { name: "Entrusting your words…" }),
+  ).toBeVisible();
+  await expect(page.locator(".ritual")).toHaveCount(0);
+  release();
+  await expect(
+    page.getByRole("button", { name: /Skip the moment/ }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: /Skip the moment/ }).click();
+  await expect(
+    page.getByRole("heading", { name: "Your words are on their way." }),
+  ).toBeVisible();
+  const reader = await browser.newContext({ reducedMotion: "no-preference" });
+  const reading = await reader.newPage();
+  await reading.goto("/");
+  await reading.getByRole("button", { name: "Find a bottle" }).click();
+  await reading.getByRole("button", { name: "Open the bottle" }).click();
+  await expect(reading.locator(".ritual")).toBeVisible();
+  await reading.emulateMedia({ reducedMotion: "reduce" });
+  await expect(reading.locator("blockquote")).toBeVisible();
+  await expect(reading.locator(".ritual")).toHaveCount(0);
+  await author.close();
+  await reader.close();
+});

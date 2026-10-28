@@ -42,6 +42,8 @@ Database restore is a destructive incident action, never part of automatic relea
 
 Sampling uses weighted reservoir selection over all eligible rows in pages of 500, not an arbitrary candidate subset. Its work is O(N) rows per draw and O(500) memory. Cost grows with the pool. Free-tier subrequest/CPU/read limits can therefore become the bottleneck. Measure the actual pool, watch provider metrics, and report limits; never silently reduce fairness or upgrade a paid plan. A large future pool may need a maintained sampling index designed and verified separately.
 
+`node scripts/capacity.mjs` runs only against synthetic in-memory local D1, using V8 sampling and D1 result metadata. The initial measurements show 2,006 rows read at 1,000 candidates and 10,006 at 5,000. Local measured CPU includes instrumentation and runtime overhead; consult hosted metrics before judging free-tier headroom. No claim of capacity at arbitrary pool sizes is made.
+
 ## Sources
 
 - [Cloudflare GitHub integration](https://developers.cloudflare.com/workers/ci-cd/builds/git-integration/github-integration/)

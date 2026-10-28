@@ -119,6 +119,10 @@ export default function App() {
     if (view !== "home")
       dialog.current?.querySelector<HTMLElement>("[data-heading]")?.focus();
   }, [view]);
+  useEffect(() => {
+    if (!motion && view === "ritual-send") go("sent");
+    if (!motion && view === "ritual-open") go("read");
+  }, [motion, view, go]);
   async function perform(action: () => Promise<void>) {
     if (pending.current) return;
     pending.current = true;
