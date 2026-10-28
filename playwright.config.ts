@@ -2,6 +2,7 @@ import { defineConfig } from "@playwright/test";
 const state = `.wrangler/e2e-${Date.now()}`;
 export default defineConfig({
   testDir: "tests/e2e",
+  outputDir: "artifacts/e2e",
   timeout: 45000,
   fullyParallel: false,
   workers: 1,

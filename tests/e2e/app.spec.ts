@@ -49,7 +49,7 @@ test("finding again recovers from an expired abandoned credential", async ({ pag
 
 test("desktop and mobile composition, keyboard, zoom, long Unicode draft, accessibility", async ({
   page,
-}) => {
+}, testInfo) => {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   for (const width of [360, 390, 768, 1440]) {
@@ -60,7 +60,7 @@ test("desktop and mobile composition, keyboard, zoom, long Unicode draft, access
       page.getByRole("heading", { name: "Some words are meant to drift." }),
     ).toBeVisible();
     await page.screenshot({
-      path: `docs/evidence/home-${width}.png`,
+      path: testInfo.outputPath(`home-${width}.png`),
       fullPage: true,
     });
     expect(
@@ -85,7 +85,7 @@ test("desktop and mobile composition, keyboard, zoom, long Unicode draft, access
         .fill(
           "Some days, the smallest things are enough.\n\nA warm cup. An open window. The sea.",
         );
-      await page.screenshot({ path: `docs/evidence/write-${width}.png` });
+      await page.screenshot({ path: testInfo.outputPath(`write-${width}.png`) });
       const a11y = await new AxeBuilder({ page })
         .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
         .analyze();
@@ -109,7 +109,7 @@ test("desktop and mobile composition, keyboard, zoom, long Unicode draft, access
 });
 test("two anonymous visitors submit, find, open plain text and report; actual API and reduced motion", async ({
   browser,
-}) => {
+}, testInfo) => {
   const author = await browser.newContext({ reducedMotion: "reduce" }),
     reader = await browser.newContext({ reducedMotion: "reduce" });
   const a = await author.newPage(),
@@ -137,7 +137,7 @@ test("two anonymous visitors submit, find, open plain text and report; actual AP
   await b.getByRole("button", { name: "Open the bottle" }).click();
   await expect(b.locator("blockquote")).toHaveText(message);
   await expect(b.locator("blockquote img")).toHaveCount(0);
-  await b.screenshot({ path: "docs/evidence/read-1440.png", fullPage: true });
+  await b.screenshot({ path: testInfo.outputPath("read-1440.png"), fullPage: true });
   await b.getByRole("button", { name: "Report", exact: true }).click();
   await b.getByRole("button", { name: "Report this bottle" }).click();
   await expect(

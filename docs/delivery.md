@@ -19,6 +19,12 @@
 
 This records the first verified application deployment. Follow-up release-safety and documentation commits use the same protected PR, exact-SHA CI and official Git build path; their current status is visible in GitHub and Cloudflare.
 
+### Recorded follow-up release
+
+The October 28 follow-up verification recorded source `239eed635b747e4d9e30dff4a11c101fa4db1faa`, [passing CI 40719476784](https://github.com/seiya058904/drift/actions/runs/40719476784) (20 unit/D1/security/release tests and seven browser flows), successful official build `dc5a9902-34df-4a8c-b1dc-2799657e1426`, deployment `59fd95ba-c783-41ab-bd3f-a1b238241bb2` and Worker version `0eff5146-4400-4787-a306-3cb861e051f3`. Public asset hashes and bootstrap security checks passed; migration remained `0001_initial.sql`. This is a dated release record, not a fresh verification of current cloud state.
+
+On October 29 (Asia/Singapore), 15 owner-authorized editorial opening messages were added and one was opened through the public UI. All 15 passed moderation and database content verification. See [operations](operations.md) for their retention and review treatment. This content-only operation did not publish a new Worker version.
+
 ## Preview and release safeguards
 
 - Production and preview D1 IDs are distinct; preview uses `fb11421f-9bf0-4b68-a09d-58411a5ee032`. Independent production and preview SESSION_SECRET/IP_SECRET bindings are provisioned.

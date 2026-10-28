@@ -24,6 +24,8 @@ The watercolor sea and transparent glass bottle were created for Drift. All inte
 
 Requires Node 24 and npm. No cloud credentials are needed for local development or tests.
 
+For AI agents and maintainers: start with [AGENTS.md](AGENTS.md), then use the [maintenance guide](docs/maintenance.md) for scoped checks, artifact handling and release verification.
+
 ```sh
 npm ci
 npm run db:local
@@ -36,13 +38,11 @@ npm run dev
 Open `http://127.0.0.1:5173`. Vite proxies relative `/api/*` requests to the local Worker. To use the built static app directly, run Wrangler with `--var ALLOWED_ORIGIN:http://127.0.0.1:8787`. Local cookies intentionally use a non-production name over loopback HTTP.
 
 ```sh
-npm run typecheck
-npm run lint
-npm test
-node scripts/check-migrations.mjs
 npx playwright install chromium
-npm run test:e2e
+npm run verify
 ```
+
+`verify` is the same gate used by GitHub Actions: documentation paths, typecheck, lint, unit/D1 tests, migration checks and E2E. E2E builds the app and starts an isolated local Worker. Migration checks require `origin/main`; see the maintenance guide if the reference is missing. New screenshots and traces go to ignored `artifacts/e2e/`; reviewed evidence in `docs/evidence/` stays unchanged during routine runs.
 
 Tests use independent local databases. Seven browser flows cover 360, 390, 768 and 1440px, keyboard/focus, Unicode length, plain-text injection protection, independent anonymous contexts, expired draws, cross-tab session renewal, reduced motion and accessibility. Local mobile simulation measured 1.19s to interactive, 2.30s LCP and 0.0075 CLS ([baseline](docs/evidence/performance.json)). After adding a smaller portrait ocean asset, production mobile simulation measured **1.72s interactive, 2.55s LCP and 0.0078 CLS**; LCP narrowly misses the 2.5s target. All three runs, including a 7.26s LCP outlier, are retained in the [production results](docs/evidence/production-performance.json). These cold-cache, throttled Chromium measurements include this workstation's network proxy; they are not physical-device or field measurements.
 

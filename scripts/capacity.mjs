@@ -2,7 +2,7 @@
 import { Miniflare, convertV4MiniflareOptions } from "miniflare";
 import { randomUUID } from "node:crypto";
 import { build } from "esbuild";
-import { readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 const source = `import app from './worker/index.ts';
 export default {async fetch(request, env, ctx) {
  let queries=0,rows=0;
@@ -159,5 +159,6 @@ const report = {
     "V8 CPU profiler at 100us; 1 warmup + 10 draws per size; D1 result metadata counted. Active samples exclude idle/program. This is sampled JS cost, not billed hosted Worker CPU.",
   results,
 };
-await writeFile("docs/evidence/capacity.json", JSON.stringify(report, null, 2));
+await mkdir("artifacts", { recursive: true });
+await writeFile("artifacts/capacity.json", JSON.stringify(report, null, 2));
 console.log(JSON.stringify(report, null, 2));

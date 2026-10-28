@@ -5,6 +5,7 @@ export default ts.config(
   {
     ignores: [
       "dist/**",
+      "artifacts/**",
       "node_modules/**",
       ".wrangler/**",
       "test-results/**",
