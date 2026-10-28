@@ -4,11 +4,11 @@
 
 A quiet, anonymous sea for a thought, a secret, a little hope. Cast a message in a bottle. Open a message left by a stranger. No accounts, replies, followers, history or read receipts.
 
-**Release status:** implementation is verified locally; official Cloudflare Git integration and production verification are in progress. A live link will appear here only after verification. This is the only source repository.
+**Live:** [drift.seiya-api.workers.dev](https://drift.seiya-api.workers.dev). Published through official Cloudflare Git builds and verified with two independent anonymous browser sessions. This public repository is the only source repository.
 
-![Drift on desktop](docs/evidence/home-1440.png)
+![Drift on desktop](docs/evidence/production-home-1440.png)
 
-<p align="center"><img src="docs/evidence/home-390.png" width="280" alt="Drift on a 390-pixel mobile viewport"/> <img src="docs/evidence/write-390.png" width="280" alt="The paper composer on mobile"/></p>
+<p align="center"><img src="docs/evidence/production-home-390.png" width="280" alt="Live Drift on a 390-pixel mobile viewport"/> <img src="docs/evidence/write-390.png" width="280" alt="The paper composer on mobile"/></p>
 
 ## A small moment of connection
 
@@ -44,7 +44,7 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
-Tests use independent local databases. E2E covers 360, 390, 768 and 1440px, keyboard/focus, Unicode length, plain-text injection protection, two anonymous browser contexts, error recovery, reduced motion and accessibility. Local fixed mobile simulation measured 1.19s to interactive, 2.30s LCP and 0.0075 CLS (three-run medians; [method and raw results](docs/evidence/performance.json)). These are not physical-device or field measurements.
+Tests use independent local databases. Seven browser flows cover 360, 390, 768 and 1440px, keyboard/focus, Unicode length, plain-text injection protection, independent anonymous contexts, expired draws, cross-tab session renewal, reduced motion and accessibility. Local mobile simulation measured 1.19s to interactive, 2.30s LCP and 0.0075 CLS ([baseline](docs/evidence/performance.json)). After adding a smaller portrait ocean asset, production mobile simulation measured **1.72s interactive, 2.55s LCP and 0.0078 CLS**; LCP narrowly misses the 2.5s target. All three runs, including a 7.26s LCP outlier, are retained in the [production results](docs/evidence/production-performance.json). These cold-cache, throttled Chromium measurements include this workstation's network proxy; they are not physical-device or field measurements.
 
 ## Architecture
 

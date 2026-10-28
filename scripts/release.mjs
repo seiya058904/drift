@@ -65,6 +65,8 @@ while (true) {
   await new Promise((resolve) => setTimeout(resolve, 30000));
 }
 // Existing in-repository branch only; fork PR builds must first be reviewed and copied to a trusted branch.
+// Workers Builds can check out only the commit, without an origin/main ref.
+execFileSync("git", ["fetch", "--no-tags", "--depth=1", "origin", "main:refs/remotes/origin/main"], { stdio: "pipe" });
 await checkMigrations();
 const wranglerConfig = JSON.parse(await readFile("wrangler.jsonc", "utf8"));
 const previewName = branch

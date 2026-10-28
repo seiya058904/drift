@@ -22,7 +22,7 @@ export async function checkMigrations() {
       .split("\n")
       .filter(Boolean);
   } catch {
-    /* Initial clone. */
+    throw Error("Migration baseline origin/main is unavailable; fetch it before checking migrations.");
   }
   for (const path of previousFiles) {
     const previous = execFileSync("git", ["show", `origin/main:${path}`], {

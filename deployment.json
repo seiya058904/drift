@@ -6,6 +6,5 @@
   "operationsDatabase": "d0250dc8-8102-4e87-9eac-a112b15bec65",
   "backupNamespace": "174b33c8542d4d9f905ec1fa36735e34",
   "productionOrigin": "https://drift.seiya-api.workers.dev",
-  "previewOrigin": "https://drift-preview.seiya-api.workers.dev",
   "requiredChecks": ["verify"]
 }
