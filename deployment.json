@@ -1,0 +1,11 @@
+{
+  "accountId": "e51d33bf9d0ca73ea5b638e60d62d9f5",
+  "repository": "seiya058904/drift",
+  "productionDatabase": "bbf016b2-a18b-46a7-ab10-79ac011bb2f1",
+  "previewDatabase": "fb11421f-9bf0-4b68-a09d-58411a5ee032",
+  "operationsDatabase": "d0250dc8-8102-4e87-9eac-a112b15bec65",
+  "backupNamespace": "174b33c8542d4d9f905ec1fa36735e34",
+  "productionOrigin": "https://drift.seiya-api.workers.dev",
+  "previewOrigin": "https://drift-preview.seiya-api.workers.dev",
+  "requiredChecks": ["verify"]
+}

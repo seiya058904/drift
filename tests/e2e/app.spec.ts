@@ -1,0 +1,131 @@
+import { test, expect } from "@playwright/test";
+import AxeBuilder from "@axe-core/playwright";
+test("desktop and mobile composition, keyboard, zoom, long Unicode draft, accessibility", async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  for (const width of [360, 390, 768, 1440]) {
+    await page.setViewportSize({ width, height: width < 768 ? 844 : 900 });
+    await page.goto("/");
+    await expect(page).toHaveTitle(/Drift/);
+    await expect(
+      page.getByRole("heading", { name: "Some words are meant to drift." }),
+    ).toBeVisible();
+    await page.screenshot({
+      path: `docs/evidence/home-${width}.png`,
+      fullPage: true,
+    });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    await page.getByRole("button", { name: "Cast a bottle" }).click();
+    await expect(page.getByLabel("Your message")).toBeVisible();
+    await page.getByLabel("Your message").fill("海🌊".repeat(250));
+    await expect(page.getByText("500 / 500")).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Seal & send" }),
+    ).toBeEnabled();
+    await page.getByLabel("Your message").fill("海🌊".repeat(251));
+    await expect(
+      page.getByRole("button", { name: "Seal & send" }),
+    ).toBeDisabled();
+    if (width === 390 || width === 1440) {
+      await page
+        .getByLabel("Your message")
+        .fill(
+          "Some days, the smallest things are enough.\n\nA warm cup. An open window. The sea.",
+        );
+      await page.screenshot({ path: `docs/evidence/write-${width}.png` });
+      const a11y = await new AxeBuilder({ page })
+        .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+        .analyze();
+      expect(a11y.violations).toEqual([]);
+    }
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("dialog")).not.toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Cast a bottle" }),
+    ).toBeFocused();
+  }
+  await page.evaluate(() => {
+    document.documentElement.style.fontSize = "200%";
+    document.body.style.zoom = "2";
+  });
+  await page.getByRole("button", { name: "About & privacy" }).click();
+  await expect(
+    page.getByRole("heading", { name: "A visit, not a profile." }),
+  ).toBeVisible();
+  expect(errors).toEqual([]);
+});
+test("two anonymous visitors submit, find, open plain text and report; actual API and reduced motion", async ({
+  browser,
+}) => {
+  const author = await browser.newContext({ reducedMotion: "reduce" }),
+    reader = await browser.newContext({ reducedMotion: "reduce" });
+  const a = await author.newPage(),
+    b = await reader.newPage();
+  await a.goto("/");
+  await a.getByRole("button", { name: "Cast a bottle" }).click();
+  const message =
+    "Take the long way home today.\n\n愿你一路有光。\n<img src=x onerror=alert(1)>";
+  await a.getByLabel("Your message").fill(message);
+  await a.getByRole("button", { name: "Seal & send" }).click();
+  await expect(
+    a.getByRole("heading", { name: "Your words are on their way." }),
+  ).toBeVisible();
+  await a
+    .getByRole("button", { name: "Back to the sea", exact: true })
+    .last()
+    .click();
+  await a.getByRole("button", { name: "Find a bottle" }).click();
+  await expect(a.getByText("The sea is quiet")).toBeVisible();
+  await b.goto("/");
+  await b.getByRole("button", { name: "Find a bottle" }).click();
+  await expect(
+    b.getByRole("heading", { name: "A bottle found you." }),
+  ).toBeVisible();
+  await b.getByRole("button", { name: "Open the bottle" }).click();
+  await expect(b.locator("blockquote")).toHaveText(message);
+  await expect(b.locator("blockquote img")).toHaveCount(0);
+  await b.screenshot({ path: "docs/evidence/read-1440.png", fullPage: true });
+  await b.getByRole("button", { name: "Report", exact: true }).click();
+  await b.getByRole("button", { name: "Report this bottle" }).click();
+  await expect(
+    b.getByText("Thank you. Your report has been received."),
+  ).toBeVisible();
+  await author.close();
+  await reader.close();
+});
+test("failed submission keeps draft, never plays success; toggles respond", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Turn atmosphere off" }).click();
+  await expect(page.locator(".app")).toHaveClass(/quiet/);
+  await page.getByRole("button", { name: "Enable ocean sound" }).click();
+  await expect(
+    page.getByRole("button", { name: "Mute ocean sound" }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: "Mute ocean sound" }).click();
+  await page.getByRole("button", { name: "Cast a bottle" }).click();
+  await page.getByLabel("Your message").fill("Keep this thought safe.");
+  await page.route("**/api/bottles", (route) =>
+    route.fulfill({
+      status: 503,
+      contentType: "application/json",
+      body: JSON.stringify({
+        error: "unavailable",
+        message: "The tide is unsettled. Please try again.",
+      }),
+    }),
+  );
+  await page.getByRole("button", { name: "Seal & send" }).click();
+  await expect(page.getByRole("alert")).toContainText("The tide is unsettled");
+  await expect(page.getByLabel("Your message")).toHaveValue(
+    "Keep this thought safe.",
+  );
+  await expect(page.locator(".ritual")).toHaveCount(0);
+});

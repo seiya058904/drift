@@ -1,0 +1,38 @@
+{
+  "url": "http://127.0.0.1:8787",
+  "measuredAt": "2026-10-28T13:12:29.555Z",
+  "browser": "Chromium, simulated mobile (not a physical device)",
+  "viewport": "390x844 @1x",
+  "network": "1.6 Mbps down, 750 Kbps up, 150 ms latency; cold cache",
+  "cpuSlowdown": 4,
+  "runs": [
+    {
+      "lcp": 2308,
+      "cls": 0.007824698039357975,
+      "interactive": 1189.4000000022352,
+      "transferred": 528127
+    },
+    {
+      "lcp": 2296,
+      "cls": 0.007476509707821546,
+      "interactive": 1245.5,
+      "transferred": 528127
+    },
+    {
+      "lcp": 2304,
+      "cls": 0.007476509707821546,
+      "interactive": 1165.300000000745,
+      "transferred": 528127
+    }
+  ],
+  "median": {
+    "interactive": 1189.4000000022352,
+    "lcp": 2304,
+    "cls": 0.007476509707821546
+  },
+  "targets": {
+    "interactive": 3000,
+    "lcp": 2500,
+    "cls": 0.1
+  }
+}

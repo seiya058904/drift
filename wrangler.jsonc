@@ -1,0 +1,63 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "drift",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-10-01",
+  "workers_dev": true,
+  "preview_urls": true,
+  "account_id": "e51d33bf9d0ca73ea5b638e60d62d9f5",
+  "vars": {
+    "APP_ENV": "production",
+    "ALLOWED_ORIGIN": "https://drift.seiya-api.workers.dev",
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "drift-production",
+      "database_id": "bbf016b2-a18b-46a7-ab10-79ac011bb2f1",
+      "migrations_dir": "migrations",
+    },
+  ],
+  "triggers": { "crons": ["17 * * * *"] },
+  "previews": {
+    "vars": {
+      "APP_ENV": "preview",
+      "ALLOWED_ORIGIN": "https://preview-origin-not-configured.invalid",
+    },
+    "d1_databases": [
+      {
+        "binding": "DB",
+        "database_name": "drift-preview",
+        "database_id": "fb11421f-9bf0-4b68-a09d-58411a5ee032",
+        "migrations_dir": "migrations",
+      },
+    ],
+    "observability": { "enabled": false },
+  },
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api", "/api/*"],
+  },
+  "observability": { "enabled": false },
+  "env": {
+    "local": {
+      "name": "drift-local",
+      "vars": {
+        "APP_ENV": "local",
+        "ALLOWED_ORIGIN": "http://127.0.0.1:5173",
+        "SESSION_SECRET": "local-only-never-deploy-this-secret",
+        "IP_SECRET": "local-only-ip-key-never-deploy",
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "drift-local",
+          "database_id": "00000000-0000-0000-0000-000000000001",
+          "migrations_dir": "migrations",
+        },
+      ],
+    },
+  },
+}
