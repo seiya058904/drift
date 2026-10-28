@@ -12,6 +12,7 @@ export function assertChecks(
   required: string[],
 ): boolean;
 export function assertHead(actual: string, expected: string): void;
+export function assertPublishedOrigin(urls: unknown, origin: string): void;
 export function releaseStages(stages: {
   confirmHead: () => Promise<void>;
   preserve: () => Promise<void>;

@@ -5,8 +5,16 @@ import {
   assertChecks,
   assertEnvironment,
   assertHead,
+  assertPublishedOrigin,
   releaseStages,
 } from "../scripts/gates.mjs";
+
+test("publication requires the platform's enabled URL, not an echoed Origin binding", () => {
+  const origin = "https://feat-drift-drift.seiya-api.workers.dev";
+  assertPublishedOrigin([origin], origin);
+  for (const urls of [undefined, [], [origin + "/other"], { ALLOWED_ORIGIN: origin }])
+    assert.throws(() => assertPublishedOrigin(urls, origin));
+});
 
 test("checked-in release configuration parses and isolates both remote databases", () => {
   const config = JSON.parse(readFileSync("deployment.json", "utf8"));

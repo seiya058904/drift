@@ -1,12 +1,13 @@
 import { readFile, writeFile, unlink } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { query } from "./cloudflare.mjs";
+import { cloudflare, query } from "./cloudflare.mjs";
 import { backup, wrangler } from "./backup.mjs";
 import {
   assertChecks,
   assertEnvironment,
   assertHead,
+  assertPublishedOrigin,
   releaseStages,
 } from "./gates.mjs";
 import { checkMigrations } from "./check-migrations.mjs";
@@ -138,10 +139,20 @@ try {
     },
   });
   console.log(result);
-  if (!result.includes(origin))
-    throw Error(
-      "Cloudflare returned an unexpected URL; verify exact Origin before accepting this deployment",
-    );
+  // Bindings echoed in deploy output are not proof that a URL is enabled.
+  const published = await cloudflare(
+    environment === "preview"
+      ? `workers/workers/${wranglerConfig.name}/previews/${previewName}`
+      : `workers/workers/${wranglerConfig.name}`,
+  );
+  assertPublishedOrigin(
+    environment === "preview"
+      ? published.urls
+      : published.subdomain?.enabled
+        ? [published.subdomain.url]
+        : [],
+    origin,
+  );
   console.log(
     JSON.stringify({ environment, sha, origin, migration: "0001_initial.sql" }),
   );

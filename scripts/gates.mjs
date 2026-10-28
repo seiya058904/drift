@@ -49,6 +49,11 @@ export function assertHead(actual, expected) {
   if (actual !== expected) throw Error("Stale build: branch HEAD changed");
 }
 
+export function assertPublishedOrigin(urls, origin) {
+  if (!Array.isArray(urls) || !urls.includes(origin))
+    throw Error("Cloudflare has not enabled the expected public URL");
+}
+
 export async function releaseStages({
   confirmHead,
   preserve,
