@@ -1,11 +1,31 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import {
   assertChecks,
   assertEnvironment,
   assertHead,
   releaseStages,
 } from "../scripts/gates.mjs";
+
+test("checked-in release configuration parses and isolates both remote databases", () => {
+  const config = JSON.parse(readFileSync("deployment.json", "utf8"));
+  const worker = JSON.parse(readFileSync("wrangler.jsonc", "utf8"));
+  assertEnvironment(
+    config,
+    "production",
+    worker.d1_databases[0].database_id,
+    worker.vars.ALLOWED_ORIGIN,
+  );
+  assertEnvironment(
+    config,
+    "preview",
+    worker.previews.d1_databases[0].database_id,
+    "https://feat-drift-drift.seiya-api.workers.dev",
+  );
+  assert.equal(worker.vars.APP_ENV, "production");
+  assert.equal(worker.previews.vars.APP_ENV, "preview");
+});
 
 test("failed backup, failed migration and changed HEAD stop upload", async () => {
   for (const failure of ["preserve", "migrate", "head"]) {
