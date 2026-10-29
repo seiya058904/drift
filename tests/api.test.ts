@@ -2,12 +2,14 @@ import { before, after, beforeEach, test } from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { build } from "esbuild";
-import { Miniflare, convertV4MiniflareOptions } from "miniflare";
+import { Miniflare, Response as MiniflareResponse, convertV4MiniflareOptions } from "miniflare";
+import { createSiteverifyFixture, fixtureToken } from "./turnstile-fixture";
 import { cleanup, type Env } from "../worker/index";
 let mf: Miniflare, db: D1Database;
 const origin = "https://drift.test";
 type Client = { cookie: string; csrf: string; ip: string };
 before(async () => {
+  const siteverify = createSiteverifyFixture();
   const bundle = await build({
     entryPoints: ["worker/index.ts"],
     bundle: true,
@@ -22,11 +24,20 @@ before(async () => {
       script: bundle.outputFiles[0].text,
       compatibilityDate: "2026-10-01",
       d1Databases: ["DB"],
+      outboundService: async (request) => {
+        assert.equal(request.url, "https://challenges.cloudflare.com/turnstile/v0/siteverify");
+        const form = new URLSearchParams(await request.text());
+        assert.equal(form.get("secret"), "test-turnstile-secret");
+        assert.equal(form.has("remoteip"), false);
+        return MiniflareResponse.json(siteverify(form));
+      },
       bindings: {
         APP_ENV: "production",
         ALLOWED_ORIGIN: origin,
         SESSION_SECRET: "test-session-key-at-least-32-characters",
         IP_SECRET: "test-ip-key-at-least-32-characters",
+        TURNSTILE_SITE_KEY: "fixture-site-key",
+        TURNSTILE_SECRET: "test-turnstile-secret",
       },
     }),
   );
@@ -64,6 +75,9 @@ function post(
   body: unknown,
   headers: Record<string, string> = {},
 ) {
+  if ((path === "bottles" || path === "report") && body && typeof body === "object" && !Object.hasOwn(body, "turnstileToken")) {
+    body = { ...body, turnstileToken: fixtureToken(path === "bottles" ? "submit_bottle" : "report_bottle") };
+  }
   return mf.dispatchFetch(`${origin}/api/${path}`, {
     method: "POST",
     headers: {
@@ -332,4 +346,46 @@ test("weighted draw traverses a pool larger than one page", async () => {
     await post(reader, "open", { token: ticket.token }),
   );
   assert.equal(opened.body, "Synthetic note 500");
+});
+
+test("unverified submissions fail before creating bottles; public config exposes only site key", async () => {
+  const config = await mf.dispatchFetch(`${origin}/api/turnstile`);
+  assert.equal(config.headers.get("cache-control"), "no-store");
+  assert.deepEqual(await config.json(), { siteKey: "fixture-site-key" });
+  for (const token of [undefined, "forged", "x".repeat(2049),
+    fixtureToken("report_bottle"), fixtureToken("submit_bottle", "wrong.test"),
+    JSON.stringify({ expired: true, action: "submit_bottle", hostname: "drift.test" }),
+  ]) {
+    const author = await client();
+    assert.equal((await post(author, "bottles", {
+      body: "Unverified message", requestKey: crypto.randomUUID(), turnstileToken: token,
+    })).status, 403);
+  }
+  assert.equal((await db.prepare("SELECT COUNT(*) n FROM bottles").first<{ n: number }>())?.n, 0);
+});
+
+test("one token cannot authorize another submission; a lost successful response remains idempotent", async () => {
+  const author = await client(), token = fixtureToken("submit_bottle");
+  const body = { body: "A verified message", requestKey: crypto.randomUUID(), turnstileToken: token };
+  const first = await content<{ id: string }>(await post(author, "bottles", body));
+  const retry = await content<{ id: string }>(await post(author, "bottles", body));
+  assert.equal(first.id, retry.id);
+  assert.equal((await post(author, "bottles", { ...body, requestKey: crypto.randomUUID(), body: "Another message" })).status, 403);
+  assert.equal((await db.prepare("SELECT COUNT(*) n FROM bottles").first<{ n: number }>())?.n, 1);
+});
+
+test("reports need their own verified action and token replay cannot report another bottle", async () => {
+  const author = await client(), reader = await client();
+  await send(author, "First report fixture");
+  await send(author, "Second report fixture");
+  const one = await content<{ id: string }>(await post(reader, "open", { token: (await draw(reader)).token }));
+  const two = await content<{ id: string }>(await post(reader, "open", { token: (await draw(reader)).token }));
+  for (const token of [undefined, fixtureToken("submit_bottle")])
+    assert.equal((await post(reader, "report", { id: one.id, turnstileToken: token })).status, 403);
+  assert.equal((await db.prepare("SELECT COUNT(*) n FROM reports").first<{ n: number }>())?.n, 0);
+  const token = fixtureToken("report_bottle");
+  assert.equal((await post(reader, "report", { id: one.id, turnstileToken: token })).status, 200);
+  assert.equal((await post(reader, "report", { id: one.id, turnstileToken: token })).status, 200);
+  assert.equal((await post(reader, "report", { id: two.id, turnstileToken: token })).status, 403);
+  assert.equal((await db.prepare("SELECT COUNT(*) n FROM reports").first<{ n: number }>())?.n, 1);
 });

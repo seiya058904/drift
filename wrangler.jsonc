@@ -8,6 +8,7 @@
   "account_id": "e51d33bf9d0ca73ea5b638e60d62d9f5",
   "vars": {
     "APP_ENV": "production",
+    "TURNSTILE_SITE_KEY": "0x4AAAAAAFp0juRdrGtrEok6",
     "ALLOWED_ORIGIN": "https://drift.seiya-api.workers.dev"
   },
   "d1_databases": [
@@ -22,6 +23,7 @@
   "previews": {
     "vars": {
       "APP_ENV": "preview",
+      "TURNSTILE_SITE_KEY": "0x4AAAAAAFp0jxPCcQQyzbtn",
       "ALLOWED_ORIGIN": "https://preview-origin-not-configured.invalid"
     },
     "d1_databases": [
@@ -46,6 +48,7 @@
       "name": "drift-local",
       "vars": {
         "APP_ENV": "local",
+        "TURNSTILE_SITE_KEY": "0x4AAAAAAFp0jxPCcQQyzbtn",
         "ALLOWED_ORIGIN": "http://127.0.0.1:5173",
         "SESSION_SECRET": "local-only-never-deploy-this-secret",
         "IP_SECRET": "local-only-ip-key-never-deploy"

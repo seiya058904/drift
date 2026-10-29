@@ -16,6 +16,7 @@ Drift is a live anonymous message-in-a-bottle website. Keep changes small, prese
 | Interface, accessibility, sound, rituals | `src/App.tsx`, `src/style.css`, `src/audio.ts`, `src/Ritual.tsx`, `src/api.ts` |
 | API, sessions, CSRF, draw/open/report | `worker/index.ts` |
 | Limits, moderation, Unicode, weights | `worker/rules.ts` |
+| Human verification on send/report | `src/Turnstile.tsx`, `worker/turnstile.ts`, `tests/turnstile.test.ts` |
 | Schema and atomic counters | `migrations/`, `tests/api.test.ts`, `tests/migrations.test.ts` |
 | Release and environment guards | `scripts/release.mjs`, `scripts/gates.mjs`, `deployment.json`, `wrangler.jsonc` |
 | Browser checks | `playwright.config.ts`, `tests/e2e/app.spec.ts` |
@@ -27,6 +28,7 @@ Drift is a live anonymous message-in-a-bottle website. Keep changes small, prese
 - Ritual success follows real API success. Retain reduced motion, keyboard support, sound opt-in and background pause behavior.
 - `/api/*` always returns API responses, never SPA HTML. Keep Origin, CSRF, secure cookies, no-store responses, idempotency, anonymous deduplication and atomic exposure/report counts intact.
 - Only approved bottles enter the weighted pool. Keep pending/hidden/flagged bottles out; never expose operational counts to visitors.
+- Turnstile gates new submissions and reports, with real Siteverify and exact action/hostname checks. Never deploy test transports, dummy keys or a fail-open flag. Browser test mocks live only under `tests/`; production entry remains `worker/index.ts`.
 - Production and preview databases, secrets and Origins stay separate. Never edit applied migrations or weaken a release gate to make a check green.
 
 ## Checks and artifacts

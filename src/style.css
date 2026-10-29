@@ -426,6 +426,9 @@ h2:focus {
   font-size: 13px;
   line-height: 1.5;
 }
+.verification { margin: 12px 0 18px; }
+.verification-widget { display: flex; justify-content: center; }
+.verification .form-note { margin: 6px 0; font-size: 12px; }
 .report-confirm button {
   margin-right: 22px;
 }

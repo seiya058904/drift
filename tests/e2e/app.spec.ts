@@ -1,5 +1,7 @@
 import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
+import { installTurnstileMock, testContext } from "./turnstile-mock";
+test.beforeEach(async ({ context }) => installTurnstileMock(context));
 
 test("an older tab can retry after another tab renews the shared session", async ({ page, context }) => {
   await page.goto("/");
@@ -110,8 +112,8 @@ test("desktop and mobile composition, keyboard, zoom, long Unicode draft, access
 test("two anonymous visitors submit, find, open plain text and report; actual API and reduced motion", async ({
   browser,
 }, testInfo) => {
-  const author = await browser.newContext({ reducedMotion: "reduce" }),
-    reader = await browser.newContext({ reducedMotion: "reduce" });
+  const author = await testContext(browser, { reducedMotion: "reduce" }),
+    reader = await testContext(browser, { reducedMotion: "reduce" });
   const a = await author.newPage(),
     b = await reader.newPage();
   await a.goto("/");
@@ -197,7 +199,7 @@ test("failed submission keeps draft, never plays success; toggles respond", asyn
 test("ritual waits for API success, can be skipped, and opens with motion", async ({
   browser,
 }) => {
-  const author = await browser.newContext({ reducedMotion: "no-preference" });
+  const author = await testContext(browser, { reducedMotion: "no-preference" });
   const page = await author.newPage();
   let release!: () => void;
   const hold = new Promise<void>((resolve) => {
@@ -225,7 +227,7 @@ test("ritual waits for API success, can be skipped, and opens with motion", asyn
   await expect(
     page.getByRole("heading", { name: "Your words are on their way." }),
   ).toBeVisible();
-  const reader = await browser.newContext({ reducedMotion: "no-preference" });
+  const reader = await testContext(browser, { reducedMotion: "no-preference" });
   const reading = await reader.newPage();
   await reading.goto("/");
   await reading.getByRole("button", { name: "Find a bottle" }).click();
@@ -236,4 +238,100 @@ test("ritual waits for API success, can be skipped, and opens with motion", asyn
   await expect(reading.locator(".ritual")).toHaveCount(0);
   await author.close();
   await reader.close();
+});
+
+test("Turnstile stays off home and reading, handles expiry and script failure without losing a draft", async ({ page }) => {
+  let scripts = 0;
+  page.on("request", (request) => { if (request.url().includes("challenges.cloudflare.com")) scripts++; });
+  await page.goto("/");
+  await page.getByRole("button", { name: "About & privacy" }).click();
+  await expect(page.getByText(/Cloudflare Turnstile checks your browser/)).toBeVisible();
+  expect(scripts).toBe(0);
+  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: "Find a bottle" }).click();
+  await page.getByRole("button", { name: "Open the bottle" }).click();
+  await expect(page.locator("blockquote")).toBeVisible();
+  expect(scripts).toBe(0);
+  await page.keyboard.press("Escape");
+  await page.route("https://challenges.cloudflare.com/**", (route) => route.abort());
+  await page.getByRole("button", { name: "Cast a bottle" }).click();
+  await page.getByLabel("Your message").fill("Keep this draft through verification trouble.");
+  await expect(page.getByRole("button", { name: "Retry verification" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Seal & send" })).toBeDisabled();
+  await page.unroute("https://challenges.cloudflare.com/**");
+  await page.getByRole("button", { name: "Retry verification" }).click();
+  await expect(page.getByRole("button", { name: "Seal & send" })).toBeEnabled();
+  await page.evaluate(() => {
+    const widgets = (window as unknown as { __turnstileWidgets: Map<string, { "expired-callback": () => void }> }).__turnstileWidgets;
+    for (const widget of widgets.values()) widget["expired-callback"]();
+  });
+  await expect(page.getByRole("button", { name: "Seal & send" })).toBeDisabled();
+  await page.getByRole("button", { name: "Retry verification" }).click();
+  await expect(page.getByRole("button", { name: "Seal & send" })).toBeEnabled();
+  await expect(page.getByLabel("Your message")).toHaveValue("Keep this draft through verification trouble.");
+});
+
+test("rejected verification resets the token and preserves the same submission key", async ({ page }) => {
+  const attempts: { turnstileToken: string; requestKey: string }[] = [];
+  await page.route("**/api/bottles", (route) => {
+    attempts.push(route.request().postDataJSON());
+    return attempts.length === 1 ? route.fulfill({ status: 403, contentType: "application/json",
+      body: JSON.stringify({ error: "verification_failed", message: "Please verify again." }) }) : route.continue();
+  });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Cast a bottle" }).click();
+  await page.getByLabel("Your message").fill("A fresh verification keeps this thought safe.");
+  await page.getByRole("button", { name: "Seal & send" }).click();
+  await expect(page.getByRole("alert")).toContainText("Please verify again");
+  await expect(page.getByLabel("Your message")).toHaveValue("A fresh verification keeps this thought safe.");
+  await page.getByRole("button", { name: "Seal & send" }).click();
+  await expect(page.getByRole("heading", { name: "Your words are on their way." })).toBeVisible();
+  expect(attempts).toHaveLength(2);
+  expect(attempts[0].requestKey).toBe(attempts[1].requestKey);
+  expect(attempts[0].turnstileToken).not.toBe(attempts[1].turnstileToken);
+});
+
+test("stalled and rejected challenges explain recovery without sending or losing the draft", async ({ page, context }) => {
+  await installTurnstileMock(context, { autoSolve: false });
+  let submissions = 0;
+  page.on("request", (request) => { if (request.url().endsWith("/api/bottles")) submissions++; });
+  await page.goto("/");
+  await page.clock.install();
+  await page.getByRole("button", { name: "Cast a bottle" }).click();
+  await page.getByLabel("Your message").fill("Keep this thought through a slow verification.");
+  await expect(page.locator("[data-test-widget]")).toHaveCount(1);
+  await page.clock.fastForward(46000);
+  await expect(page.getByRole("status")).toContainText("Verification is taking too long");
+  await page.getByRole("button", { name: "Retry verification" }).click();
+  await expect(page.getByRole("status")).toHaveText("Checking your browser…");
+
+  const fire = (event: string, argument?: string) => page.evaluate(({ event, argument }) => {
+    const widgets = (window as unknown as { __turnstileWidgets: Map<string, Record<string, unknown>> }).__turnstileWidgets;
+    for (const widget of widgets.values()) (widget[event] as (argument?: string) => void)(argument);
+  }, { event, argument });
+  await fire("before-interactive-callback");
+  await expect(page.getByRole("status")).toHaveText("Please complete the verification below.");
+  await page.clock.fastForward(46000);
+  await expect(page.getByRole("status")).toHaveText("Please complete the verification below.");
+  await fire("after-interactive-callback");
+  await fire("error-callback", "600010");
+  await expect(page.getByRole("status")).toContainText("Cloudflare could not verify this browser");
+  await expect(page.getByText("Verification code: 600010")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Seal & send" })).toBeDisabled();
+  await expect(page.getByLabel("Your message")).toHaveValue("Keep this thought through a slow verification.");
+  expect(submissions).toBe(0);
+
+  await page.getByRole("button", { name: "Retry verification" }).click();
+  await expect(page.getByText("Verification code: 600010")).toHaveCount(0);
+  await fire("error-callback", "110200");
+  await expect(page.getByRole("status")).toContainText("not configured for this site");
+  await page.getByRole("button", { name: "Retry verification" }).click();
+  await fire("error-callback", "<img src=x onerror=alert(1)>");
+  await expect(page.getByText(/Verification code:/)).toHaveCount(0);
+  await expect(page.locator(".verification img")).toHaveCount(0);
+  expect(await page.evaluate(() => {
+    const widgets = (window as unknown as { __turnstileWidgets: Map<string, Record<string, unknown>> }).__turnstileWidgets;
+    return [...widgets.values()].every(widget => widget["refresh-timeout"] === "manual" && widget["refresh-expired"] === "manual");
+  })).toBe(true);
 });
