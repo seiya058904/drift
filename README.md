@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/readme-cover.svg" width="1200" alt="Drift: an illustrated glass bottle carrying a note across a quiet sea" />
+</p>
+
 # Drift
 
 *Some words are meant to drift.*
@@ -14,7 +18,7 @@ A quiet, anonymous sea for a thought, a secret, a little hope. Cast a message in
 
 - Write in English, Chinese or any Unicode text, up to 500 characters. Messages render as plain text.
 - Fold, seal and cast your bottle; watch another drift ashore and unfold. Rituals begin only after API success and can be skipped.
-- Read once per anonymous 24-hour visit. Your own bottles stay out of your draw pool.
+- Each opened bottle leaves your draw pool for the rest of your anonymous 24-hour session. You can find other bottles during that visit, and your own submissions stay out of the pool.
 - Report harmful content. Three distinct sessions' reports pause a bottle for local operator review.
 - Managed Cloudflare Turnstile protects sending and reporting. It loads only in those forms; browsing and finding bottles remain challenge-free. Verification errors retain your draft.
 - Ocean sound is opt-in and synthesized locally. Turn atmosphere off, use the keyboard, or rely on your device's reduced-motion preference. Background tabs pause sound and movement.
