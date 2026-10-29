@@ -12,6 +12,9 @@
   --gold: #b18a46;
   --serif: "Cormorant Garamond", Georgia, "Times New Roman", serif;
   --line: rgba(73, 66, 49, 0.22);
+  --ease-settle: cubic-bezier(.16, 1, .3, 1);
+  --ease-tide: cubic-bezier(.45, 0, .55, 1);
+  --quick: 180ms;
 }
 * {
   box-sizing: border-box;
@@ -19,6 +22,10 @@
 body {
   margin: 0;
 }
+::selection { background: #b18a4640; color: inherit; }
+textarea { caret-color: #936d34; }
+* { scrollbar-width: thin; scrollbar-color: #ac997a transparent; }
+body:has(dialog[open]) { overflow: hidden; }
 button,
 a,
 input,
@@ -86,14 +93,14 @@ h2:focus {
 }
 .sea-sheen {
   position: absolute;
-  inset: 60% 0 0;
+  inset: 56% 35% 0 0;
   z-index: -2;
   pointer-events: none;
   background: radial-gradient(ellipse at 30% 20%, #f1bd6712, transparent 55%);
   opacity: 0.7;
 }
 .motion .sea-sheen {
-  animation: light 9s ease-in-out infinite alternate;
+  animation: light 11s var(--ease-tide) infinite alternate;
 }
 .quiet .seascape {
   background-image: none;
@@ -129,11 +136,10 @@ h2:focus {
   background: #172f4340;
   display: grid;
   place-items: center;
-  transition: background 0.2s;
+  transition: background var(--quick), transform var(--quick) var(--ease-settle), border-color var(--quick);
 }
-.icon-button:hover {
-  background: #f8e9ca20;
-}
+.icon-button:hover { background: #f8e9ca20; border-color: #fff4e1; }
+.icon-button:active { transform: scale(.94); }
 .app main {
   position: relative;
   flex: 1;
@@ -143,22 +149,23 @@ h2:focus {
   text-align: center;
   position: relative;
   z-index: 2;
-  padding: 0 24px 220px;
+  padding: clamp(8px, 3vh, 32px) 24px 220px;
   margin: 0 auto;
   max-width: 850px;
 }
 .welcome h1 {
-  font-size: clamp(54px, 5.1vw, 78px);
-  line-height: 0.99;
+  font-size: clamp(54px, 5.4vw, 82px);
+  line-height: 1.02;
   letter-spacing: -0.025em;
-  text-shadow: 0 2px 22px #142c44a0;
+  text-shadow: 0 3px 24px #142c4480;
+  text-wrap: balance;
 }
 .welcome em {
   font-weight: 400;
 }
 .intro {
-  font: 25px/1.25 var(--serif);
-  margin: 24px 0 28px;
+  font: 25px/1.35 var(--serif);
+  margin: 26px 0 30px;
   text-shadow: 0 1px 12px #122d45;
 }
 .home-actions {
@@ -180,16 +187,19 @@ h2:focus {
   transition:
     background 0.2s,
     box-shadow 0.2s,
-    transform 0.2s;
+    transform var(--quick) var(--ease-settle);
   text-decoration: none;
 }
-.button:not(:disabled):hover {
-  transform: translateY(-2px);
-}
+.button:not(:disabled):hover { transform: translateY(-2px); }
+.button:not(:disabled):active { transform: translateY(0) scale(.985); }
+.button svg { transition: transform 240ms var(--ease-settle); }
+.button:not(:disabled):hover svg, .button:focus-visible svg { transform: translateX(3px); }
+.button[aria-busy="true"] { cursor: progress; opacity: .8; }
+.motion .button[aria-busy="true"] { animation: waiting 1.8s var(--ease-tide) infinite; }
 .primary {
   background: #faecd4;
   color: #233746;
-  box-shadow: 0 3px 24px #f4bf7920;
+  box-shadow: 0 4px 16px #101e3030;
 }
 .primary:hover {
   background: #fff7e6;
@@ -220,35 +230,34 @@ h2:focus {
 .paper-outline:hover {
   background: #ded7c940;
 }
+.bottle { position: relative; width: 140px; height: 280px; }
+.bottle img { position: absolute; display: block; height: auto; pointer-events: none; }
+.bottle .bottle-glass { width: 100%; height: 92%; inset: 8% 0 0; }
+.bottle .bottle-cork { width: 38%; height: 16%; left: 31%; top: 0; }
+.bottle .bottle-note { width: 27%; height: 44%; left: 37%; top: 42%; opacity: .86; transform: rotate(5deg); }
 .floating-bottle {
-  position: absolute;
-  width: 350px;
-  right: 12%;
-  bottom: 13%;
-  pointer-events: none;
-  transform: rotate(-4deg);
-  z-index: 1;
+  position: absolute; width: 310px; height: 240px;
+  right: 12%; bottom: 10%; pointer-events: none; z-index: 1;
 }
-.floating-bottle img {
-  display: block;
-  width: 100%;
-  height: auto;
-  filter: drop-shadow(0 6px 10px #08233860);
-}
-.motion .floating-bottle {
-  animation: bob 7s ease-in-out infinite;
+.bottle-bob { position: absolute; inset: 0; }
+.bottle-tilt { position: absolute; left: 29%; top: -8%; transform: rotate(53deg); }
+.floating-bottle .bottle { width: 128px; height: 256px; }
+.motion .bottle-bob { animation: buoyancy 7s var(--ease-tide) infinite; }
+.motion .bottle-tilt { animation: keel 9s var(--ease-tide) infinite; }
+.water-shadow {
+  position: absolute; width: 70%; height: 9%; left: 18%; bottom: 15%;
+  border-radius: 50%; background: radial-gradient(ellipse, #071d3370, transparent 70%);
 }
 .ripple {
-  position: absolute;
-  left: 9%;
-  bottom: 1%;
-  width: 75%;
-  height: 13%;
-  border: 1px solid #d9e7e757;
-  border-radius: 50%;
-  transform: rotate(-10deg);
-  z-index: -1;
+  position: absolute; left: 10%; bottom: 10%; width: 88%; height: 18%;
+  border: 1px solid #dfd7b94d; border-radius: 50%; transform: rotate(-8deg);
 }
+.ripple-far { left: 4%; bottom: 7%; width: 100%; height: 22%; opacity: .35; }
+.motion .ripple-near { animation: wake 7s var(--ease-tide) infinite; }
+.motion .ripple-far { animation: wake 7s var(--ease-tide) -2s infinite; }
+.motion .water-shadow { animation: contact 7s var(--ease-tide) infinite; }
+.motion:not([data-scene="home"]) .floating-bottle *,
+.motion:not([data-scene="home"]) .sea-sheen { animation-play-state: paused; }
 .site-footer {
   display: flex;
   justify-content: space-between;
@@ -292,19 +301,28 @@ h2:focus {
   width: min(580px, calc(100% - 40px));
   max-height: calc(100dvh - 48px);
   overflow: auto;
-  box-shadow: 0 22px 80px #0005;
+  box-shadow: 0 24px 70px #07121e55;
   border-radius: 3px;
 }
 .sheet-dialog::backdrop {
-  background: #07121ed9;
-  backdrop-filter: blur(3px);
+  background: #07121ec9;
+}
+.motion .sheet-dialog[open]::backdrop { animation: veil-in 380ms ease-out both; }
+.motion .sheet-dialog.is-leaving::backdrop { animation: veil-out 240ms ease-in both; }
+.paper { transform-origin: center; }
+@keyframes veil-in { from { background-color: #07121e00; } to { background-color: #07121ec9; } }
+@keyframes veil-out { to { background-color: #07121e00; } }
+@media (prefers-reduced-motion: no-preference) {
+  .motion .welcome h1 { animation: shore-arrival 680ms var(--ease-settle) both; }
+  .motion .intro { animation: shore-arrival 600ms 80ms var(--ease-settle) both; }
+  .motion .home-actions { animation: shore-arrival 560ms 160ms var(--ease-settle) both; }
 }
 .paper {
   position: relative;
   padding: 52px 44px 34px;
   background-color: var(--paper);
   background-image: url("/art/paper.svg");
-  border: 1px solid #e0ceaa;
+  border: 1px solid #e1d0b0;
   border-radius: 3px;
   min-width: 0;
 }
@@ -332,6 +350,7 @@ h2:focus {
   line-height: 1.03;
   margin: 0 0 32px;
   letter-spacing: -0.025em;
+  text-wrap: balance;
 }
 .paper label {
   font-size: 12px;
@@ -351,12 +370,14 @@ h2:focus {
     #766c5414 33px,
     #766c5414 34px
   );
-  border: 1px solid #8b796d50;
+  border: 1px solid #8b796d40;
   border-radius: 4px;
   padding: 15px 16px;
   font: 22px/34px var(--serif);
   color: var(--ink);
+  transition: border-color var(--quick), box-shadow var(--quick);
 }
+.paper textarea:focus-visible { outline: 2px solid #9b753d; outline-offset: 3px; }
 .paper textarea::placeholder {
   font-style: italic;
   color: #6c6b62;
@@ -426,7 +447,11 @@ h2:focus {
   font-size: 13px;
   line-height: 1.5;
 }
-.verification { margin: 12px 0 18px; }
+.report-disclosure { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows 280ms var(--ease-settle), opacity 180ms; }
+.report-disclosure > div { overflow: hidden; min-height: 0; }
+.report-disclosure[data-open="true"] { grid-template-rows: 1fr; opacity: 1; }
+.motion .error-message { animation: shore-arrival 240ms var(--ease-settle); }
+.verification { margin: 12px 0 18px; min-height: 28px; }
 .verification-widget { display: flex; justify-content: center; }
 .verification .form-note { margin: 6px 0; font-size: 12px; }
 .report-confirm button {
@@ -452,12 +477,8 @@ h2:focus {
   margin-top: 12px;
   font-size: 13px;
 }
-.found-bottle {
-  width: min(100%, 310px);
-  height: auto;
-  margin: -15px auto 6px;
-  display: block;
-}
+.found-bottle { width: 100%; margin: 4px auto 28px; display: grid; place-items: center; }
+.found-bottle .bottle { width: 110px; height: 220px; }
 .empty-wave {
   font: 90px/1 var(--serif);
   color: #617e89;
@@ -478,110 +499,55 @@ h2:focus {
 .error-message {
   padding: 14px 16px;
   background: #f0d8c7;
-  border-left: 2px solid #8a492d;
+  border: 1px solid #8a492d45;
   font-size: 13px;
   line-height: 1.6;
   margin-top: 20px;
 }
-.ritual-dialog {
-  box-shadow: none;
-  overflow: hidden;
-  max-width: 600px;
-  color: #fff3dc;
-}
-.ritual-dialog .paper {
-  border: 0;
-  background: none;
-  padding: 30px 20px;
-}
+.ritual-dialog { box-shadow: none; overflow: visible; color: #fff3dc; }
+.ritual-dialog > .paper { opacity: 0; }
+.ritual-dialog > .centered { color: #fff3dc; padding: 40px 20px; }
 .ritual {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  min-height: 400px;
-  justify-content: center;
+  position: fixed; inset: 0; overflow: hidden; pointer-events: none;
+  color: #fff3dc; text-align: center; z-index: 2;
 }
-.ritual-object {
-  width: 180px;
-  height: 220px;
-  position: relative;
-  margin: 0 0 38px;
+.ritual-stage { position: absolute; inset: 0; perspective: 1200px; }
+.ritual-object { position: absolute; width: 140px; height: 280px; left: calc(50% - 70px); top: calc(45% - 140px); }
+.fold-paper {
+  position: absolute; width: min(320px, calc(100vw - 64px)); height: 270px;
+  left: max(calc(50% - 160px), 32px); top: calc(45% - 135px);
+  transform-style: preserve-3d;
 }
-.ritual-glass {
-  position: absolute;
-  left: 40px;
-  top: 40px;
-  width: 100px;
-  height: 170px;
-  background: linear-gradient(
-    100deg,
-    #c1e4df25,
-    #cee6db70 12%,
-    #96b0a215 25%,
-    #d3b36d30 80%,
-    #d8e5d850
-  );
-  border: 1px solid #e5e7c9aa;
-  border-radius: 40px 40px 24px 24px;
-  box-shadow:
-    inset 3px 0 5px #e0edcf7a,
-    0 10px 40px #ffd99215;
-}
-.ritual-glass::before {
-  content: "";
-  position: absolute;
-  top: -27px;
-  width: 36px;
-  left: 31px;
-  height: 36px;
-  border: 1px solid #d8e4d4;
-  background: #b8c7af33;
-  border-radius: 5px;
-}
-.ritual-cork {
-  position: absolute;
-  width: 34px;
-  height: 27px;
-  top: 4px;
-  left: 74px;
-  background: repeating-linear-gradient(
-    20deg,
-    #a37b50,
-    #a37b50 4px,
-    #8d633c 5px,
-    #c29769 6px
-  );
-  border-radius: 4px;
-}
-.rolled-note {
-  position: absolute;
-  inset: 40px 30px 25px;
-  background: linear-gradient(90deg, #b8a583, #f5dfb3, #a08c64);
-  border-radius: 9px;
-  transform: rotate(8deg);
-}
-.ritual-paper {
-  position: absolute;
-  inset: 0 -30px;
+.fold-panel {
+  position: absolute; width: 100%; height: 90px; left: 0;
   background: var(--paper) url("/art/paper.svg");
-  box-shadow: 0 2px 20px #0003;
-  padding: 60px 30px;
-  color: var(--ink);
-  font: italic 26px/1.3 var(--serif);
-  transform-origin: center;
+  box-shadow: 0 1px 0 #b7a38655, 0 8px 22px #07121e18;
+  transform-style: preserve-3d;
 }
-.ritual-paper span {
-  display: block;
-  font-size: 36px;
-  margin-top: 25px;
+.fold-top { top: 0; transform-origin: center bottom; }
+.fold-middle { top: 90px; display: grid; place-items: center; }
+.fold-bottom { top: 180px; transform-origin: center top; }
+.fold-shade { position: absolute; inset: 0; background: linear-gradient(#9f886140, #9f886100); opacity: 0; }
+.fold-ink { font: italic 26px/1.25 var(--serif); color: var(--ink); }
+.ritual-impact { position: absolute; left: calc(50% - 68px); top: calc(45% + 175px); width: 225px; height: 36px; }
+.ritual-impact i { position: absolute; inset: 0; border: 1px solid #f5e4bcaa; border-radius: 50%; }
+.ritual-impact i + i { inset: 8px 25px; border-color: #f5e4bc66; }
+.ritual-caption {
+  position: absolute; top: calc(45% + 230px); left: 20px; right: 20px;
+  font: 24px/1.4 var(--serif); height: 3em; display: grid; place-items: start center;
 }
-.ritual p {
-  font: 24px/1.4 var(--serif);
+.ritual-caption span { grid-area: 1 / 1; }
+.ritual-skip {
+  position: absolute; bottom: max(24px, env(safe-area-inset-bottom));
+  left: 50%; transform: translateX(-50%); pointer-events: auto;
+  font-size: 12px; white-space: nowrap; padding: 12px 18px;
 }
-.ritual .text-button {
-  font-size: 12px;
-  margin-top: 18px;
+@media (max-height: 640px) {
+  .ritual-object { top: calc(40% - 140px); }
+  .fold-paper { top: calc(40% - 135px); }
+  .ritual-caption { top: auto; bottom: 58px; font-size: 20px; height: 2.8em; }
+  .ritual-impact { top: calc(40% + 130px); }
+  .ritual-skip { bottom: 8px; }
 }
 .sr-only {
   position: absolute;
@@ -591,18 +557,21 @@ h2:focus {
   clip-path: inset(50%);
   white-space: nowrap;
 }
-.is-hidden * {
+.is-hidden *, .is-hidden *::before, .is-hidden *::after {
   animation-play-state: paused !important;
 }
-@keyframes bob {
-  0%,
-  100% {
-    transform: translateY(0) rotate(-4deg);
-  }
-  50% {
-    transform: translateY(10px) rotate(0);
-  }
+@keyframes shore-arrival {
+  from { opacity: .35; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
 }
+@keyframes buoyancy { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(9px); } }
+@keyframes keel { 0%, 100% { transform: rotate(53deg); } 50% { transform: rotate(57deg); } }
+@keyframes wake {
+  0%, 100% { transform: rotate(-8deg) scale(.92); opacity: .18; }
+  50% { transform: rotate(-8deg) scale(1.06); opacity: .5; }
+}
+@keyframes contact { 0%, 100% { opacity: .5; transform: scaleX(.9); } 50% { opacity: .85; transform: scaleX(1); } }
+@keyframes waiting { 0%, 100% { opacity: .85; } 50% { opacity: .6; } }
 @keyframes light {
   to {
     opacity: 0.2;
@@ -616,7 +585,7 @@ h2:focus {
     min-height: 700px;
   }
   .floating-bottle {
-    width: 420px;
+    right: 15%;
     bottom: 16%;
   }
 }
@@ -664,11 +633,13 @@ h2:focus {
   }
   .floating-bottle {
     width: 240px;
-    right: 12%;
+    height: 190px;
+    right: calc(50% - 120px);
     bottom: 4%;
   }
+  .floating-bottle .bottle { width: 96px; height: 192px; }
   .site-footer {
-    font-size: 10px;
+    font-size: 11px;
     padding: 10px 24px 20px;
     gap: 20px;
     background: #0a1d2c40;
@@ -695,15 +666,11 @@ h2:focus {
     height: 238px;
     font-size: 21px;
   }
-  .writing-meta {
-    font-size: 10px;
-  }
+  .writing-meta { font-size: 11px; }
   .message-body {
     font-size: 27px;
   }
-  .message-meta {
-    font-size: 10px;
-  }
+  .message-meta { font-size: 11px; }
   .desktop-break {
     display: none;
   }
@@ -748,6 +715,7 @@ h2:focus {
     padding-bottom: 200px;
   }
 }
+.still *, .still *::before, .still *::after { animation: none !important; transition: none !important; }
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

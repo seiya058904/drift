@@ -9,18 +9,11 @@ import {
 import { api, ApiError } from "./api";
 import RitualBoundary from "./RitualBoundary";
 import Turnstile from "./Turnstile";
-const Ritual = lazy(() => import("./Ritual"));
-type View =
-  | "home"
-  | "write"
-  | "found"
-  | "read"
-  | "empty"
-  | "sent"
-  | "held"
-  | "about"
-  | "ritual-send"
-  | "ritual-open";
+import Bottle from "./Bottle";
+import { useScene, type View } from "./useScene";
+import type { RitualOrigin } from "./Ritual";
+const loadRitual = () => import("./Ritual");
+const Ritual = lazy(loadRitual);
 type Bottle = { id: string; body: string };
 function Icon({
   name,
@@ -64,8 +57,7 @@ function Icon({
   );
 }
 export default function App() {
-  const [view, setView] = useState<View>("home"),
-    [message, setMessage] = useState(""),
+  const [message, setMessage] = useState(""),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
   const [token, setToken] = useState(""),
@@ -89,11 +81,25 @@ export default function App() {
     audioModule = useRef<typeof import("./audio") | null>(null);
   const count = Array.from(message).length,
     motion = atmosphere && !reduced;
+  const { view, navigate, sheet, leaving, closing } = useScene(motion);
+  const [origin, setOrigin] = useState<RitualOrigin | null>(null);
   const go = useCallback((next: View) => {
     setError("");
     setConfirmReport(false);
-    setView(next);
-  }, []);
+    navigate(next);
+  }, [navigate]);
+  const captureOrigin = (selector: string) => {
+    const element = dialog.current?.querySelector(selector);
+    if (!element) return;
+    const { x, y, width, height } = element.getBoundingClientRect();
+    setOrigin({ x, y, width, height });
+  };
+  useEffect(() => {
+    if (motion && (view === "write" || view === "found")) {
+      // Optional preloading never blocks the form or swallows the lazy boundary.
+      void loadRitual().catch(() => {});
+    }
+  }, [view, motion]);
   useEffect(() => {
     performance.mark("drift-interactive");
     const query = matchMedia("(prefers-reduced-motion: reduce)"),
@@ -104,6 +110,7 @@ export default function App() {
       void audioModule.current?.suspendWhenHidden();
     };
     document.addEventListener("visibilitychange", hidden);
+    hidden();
     return () => {
       query.removeEventListener("change", change);
       document.removeEventListener("visibilitychange", hidden);
@@ -124,7 +131,7 @@ export default function App() {
   }, [view]);
   useEffect(() => {
     if (view !== "home")
-      dialog.current?.querySelector<HTMLElement>("[data-heading]")?.focus();
+      dialog.current?.querySelector<HTMLElement>("[data-heading]")?.focus({ preventScroll: true });
   }, [view]);
   useEffect(() => {
     if (!motion && view === "ritual-send") go("sent");
@@ -161,6 +168,7 @@ export default function App() {
           go("held");
           return;
         }
+        captureOrigin("textarea");
         setMessage("");
         submitKey.current = crypto.randomUUID();
         go(motion ? "ritual-send" : "sent");
@@ -193,6 +201,7 @@ export default function App() {
     await perform(async () => {
       const found = await api<Bottle>("open", { token });
       setBottle(found);
+      captureOrigin(".found-bottle .bottle");
       drawKey.current = crypto.randomUUID();
       go(motion ? "ritual-open" : "read");
     });
@@ -227,6 +236,7 @@ export default function App() {
   return (
     <div
       className={`app ${motion ? "motion" : "still"} ${atmosphere ? "" : "quiet"}`}
+      data-scene={view}
     >
       <div className="seascape" aria-hidden="true" />
       <div className="sea-sheen" aria-hidden="true" />
@@ -287,6 +297,7 @@ export default function App() {
                 void find();
               }}
               disabled={busy}
+              aria-busy={busy && view === "home"}
             >
               {busy && view === "home"
                 ? "Listening to the sea…"
@@ -300,8 +311,10 @@ export default function App() {
           ) : null}
         </section>
         <div className="floating-bottle" aria-hidden="true">
-          <img src="/art/bottle.webp" width="720" height="480" alt="" />
-          <span className="ripple" />
+          <div className="bottle-bob"><div className="bottle-tilt"><Bottle /></div></div>
+          <span className="water-shadow" />
+          <span className="ripple ripple-near" />
+          <span className="ripple ripple-far" />
         </div>
       </main>
       <footer className="site-footer">
@@ -321,14 +334,14 @@ export default function App() {
       </footer>
       <dialog
         ref={dialog}
-        className={`sheet-dialog ${view.startsWith("ritual") ? "ritual-dialog" : ""}`}
+        className={`sheet-dialog ${view.startsWith("ritual") ? "ritual-dialog" : ""} ${closing ? "is-leaving" : ""}`}
         aria-labelledby="dialog-heading"
         onCancel={(event) => {
           event.preventDefault();
           close();
         }}
       >
-        <div className="paper">
+        <div className="paper" ref={sheet} inert={leaving || view.startsWith("ritual")} aria-hidden={view.startsWith("ritual") || undefined}>
           {!view.startsWith("ritual") ? (
             <button
               className="close-button"
@@ -382,6 +395,7 @@ export default function App() {
                 className="button ink full"
                 disabled={busy || !message.trim() || count > 500 || !sendProof}
                 type="submit"
+                aria-busy={busy}
               >
                 {busy ? "Entrusting your words…" : "Seal & send"}
                 <Icon name="arrow" />
@@ -397,17 +411,12 @@ export default function App() {
                 A bottle found you.
               </h2>
               <p>Someone, somewhere, left a little of their world.</p>
-              <img
-                className="found-bottle"
-                src="/art/bottle.webp"
-                alt="A glass bottle holding a rolled letter"
-                width="320"
-                height="214"
-              />
+              <div className="found-bottle" role="img" aria-label="A glass bottle holding a rolled letter"><Bottle /></div>
               <button
                 className="button ink full"
                 onClick={open}
                 disabled={busy}
+                aria-busy={busy}
               >
                 {busy ? "Opening your bottle…" : "Open the bottle"}
                 <Icon name="arrow" />
@@ -417,9 +426,9 @@ export default function App() {
               </p>
             </div>
           ) : null}
-          {view === "read" && bottle ? (
+          {(view === "read" || view === "ritual-open") && bottle ? (
             <>
-              <h2 id="dialog-heading" data-heading tabIndex={-1}>
+              <h2 id={view === "read" ? "dialog-heading" : undefined} data-heading={view === "read" ? "" : undefined} tabIndex={-1}>
                 A message found
                 <br /> its way to you.
               </h2>
@@ -444,10 +453,11 @@ export default function App() {
                   {reported ? "Reported" : "Report"}
                 </button>
               </div>
-              {confirmReport ? (
+              <div className="report-disclosure" data-open={confirmReport} inert={!confirmReport} aria-hidden={!confirmReport}>
+                <div>
                 <div className="report-confirm">
                   <p>Does this message feel harmful or unwanted?</p>
-                  <Turnstile key={`report-${reportAttempt}`} action="report_bottle" onToken={setReportProof} busy={busy} />
+                  {confirmReport ? <Turnstile key={`report-${reportAttempt}`} action="report_bottle" onToken={setReportProof} busy={busy} /> : null}
                   <button
                     className="text-button"
                     onClick={report}
@@ -463,7 +473,8 @@ export default function App() {
                     Cancel
                   </button>
                 </div>
-              ) : null}
+                </div>
+              </div>
               {reported ? (
                 <p className="form-note" role="status">
                   Thank you. Your report has been received.
@@ -605,6 +616,22 @@ export default function App() {
               </button>
             </>
           ) : null}
+          {view !== "home" && error ? (
+            <div role="alert" className="error-message">
+              <p>{error}</p>
+              {view === "found" ? (
+                <button
+                  className="text-button"
+                  disabled={busy}
+                  onClick={() => {
+                    drawKey.current = crypto.randomUUID();
+                    void find();
+                  }}
+                >Find another bottle</button>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
           {view === "ritual-send" || view === "ritual-open" ? (
             <>
               <h2
@@ -618,6 +645,7 @@ export default function App() {
                   : "Your bottle is opening"}
               </h2>
               <RitualBoundary
+                key={view}
                 fallback={
                   <button
                     className="button primary"
@@ -644,30 +672,14 @@ export default function App() {
                 >
                   <Ritual
                     kind={view === "ritual-send" ? "send" : "open"}
+                    origin={origin}
+                    sheet={sheet}
                     onDone={() => go(view === "ritual-send" ? "sent" : "read")}
                   />
                 </Suspense>
               </RitualBoundary>
             </>
           ) : null}
-          {view !== "home" && error ? (
-            <div role="alert" className="error-message">
-              <p>{error}</p>
-              {view === "found" ? (
-                <button
-                  className="text-button"
-                  disabled={busy}
-                  onClick={() => {
-                    drawKey.current = crypto.randomUUID();
-                    void find();
-                  }}
-                >
-                  Find another bottle
-                </button>
-              ) : null}
-            </div>
-          ) : null}
-        </div>
       </dialog>
     </div>
   );
