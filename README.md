@@ -1,14 +1,24 @@
 <p align="center">
-  <img src="docs/readme-cover.svg" width="1200" alt="Drift: an illustrated glass bottle carrying a note across a quiet sea" />
+  <a href="https://drift.seiya-api.workers.dev">
+    <img src="docs/readme-cover.svg" width="1200" alt="Drift: an illustrated glass bottle carrying a note across a quiet sea" />
+  </a>
 </p>
 
-# Drift
+<h1 align="center">Drift</h1>
 
-*Some words are meant to drift.*
+<p align="center"><em>Some words are meant to drift.</em></p>
 
 A quiet, anonymous sea for a thought, a secret, a little hope. Cast a message in a bottle. Open a message left by a stranger. No accounts, replies, followers, history or read receipts.
 
-**Live:** [drift.seiya-api.workers.dev](https://drift.seiya-api.workers.dev). Published through official Cloudflare Git builds and verified with two independent anonymous browser sessions. This public repository is the only source repository.
+<p align="center">
+  <a href="https://drift.seiya-api.workers.dev"><strong>Visit the sea →</strong></a>
+  &nbsp;·&nbsp;
+  <a href="#a-small-moment-of-connection">The experience</a>
+  &nbsp;·&nbsp;
+  <a href="#run-locally">Run locally</a>
+  &nbsp;·&nbsp;
+  <a href="#architecture">Architecture</a>
+</p>
 
 ![Drift on desktop](docs/evidence/production-home-1440.png)
 
@@ -36,7 +46,11 @@ npm ci
 npm run db:local
 npm run build
 npm run dev:api
-# In a second terminal:
+```
+
+Keep the API server running. In a **second terminal**, from the same repository root:
+
+```sh
 npm run dev
 ```
 
@@ -49,7 +63,16 @@ npm run verify
 
 `verify` is the same gate used by GitHub Actions: documentation paths, typecheck, lint, unit/D1 tests, migration checks and E2E. E2E builds the app and starts an isolated local Worker. Migration checks require `origin/main`; see the maintenance guide if the reference is missing. New screenshots and traces go to ignored `artifacts/e2e/`; reviewed evidence in `docs/evidence/` stays unchanged during routine runs.
 
-Tests use independent local databases. Browser flows cover 360, 390, 768 and 1440px, keyboard/focus, Unicode length, plain-text injection protection, independent anonymous contexts, expired draws, cross-tab session renewal, reduced motion, accessibility and verification failure/retry behavior. Local mobile simulation measured 1.19s to interactive, 2.30s LCP and 0.0075 CLS ([baseline](docs/evidence/performance.json)). After adding a smaller portrait ocean asset, production mobile simulation measured **1.72s interactive, 2.55s LCP and 0.0078 CLS**; LCP narrowly misses the 2.5s target. All three runs, including a 7.26s LCP outlier, are retained in the [production results](docs/evidence/production-performance.json). These cold-cache, throttled Chromium measurements include this workstation's network proxy; they are not physical-device or field measurements.
+Tests use independent local databases. Browser flows cover 360, 390, 768 and 1440px, keyboard/focus, Unicode length, plain-text injection protection, independent anonymous contexts, expired draws, cross-tab session renewal, reduced motion, accessibility and verification failure/retry behavior.
+
+Production mobile simulation recorded **2.55s LCP**, just above the 2.5s target. Physical-device and field performance remain unverified.
+
+<details>
+<summary><strong>Performance measurements and test conditions</strong></summary>
+
+Local mobile simulation measured 1.19s to interactive, 2.30s LCP and 0.0075 CLS ([baseline](docs/evidence/performance.json)). After adding a smaller portrait ocean asset, production mobile simulation measured **1.72s interactive, 2.55s LCP and 0.0078 CLS**; LCP narrowly misses the 2.5s target. All three runs, including a 7.26s LCP outlier, are retained in the [production results](docs/evidence/production-performance.json). These cold-cache, throttled Chromium measurements include this workstation's network proxy; they are not physical-device or field measurements.
+
+</details>
 
 ## Architecture
 
@@ -70,6 +93,8 @@ D1 stores messages, expiring sessions, draw credentials, deduplication records a
 All mutations require POST, JSON, exact Origin and a session-bound CSRF token. Remote cookies use `__Host-`, HttpOnly, Secure, SameSite=Strict and Path=/. Content responses use no-store. Raw IP addresses are not stored; a daily rotating keyed hash supports IP limits. Anonymous session links expire after 24 hours and are cleaned hourly. Drift has no audience analytics or persistent visitor profile. Turnstile processes browser/network signals for abuse prevention; protected handlers verify success, action and the exact configured hostname before creating a bottle or report.
 
 ## Release, moderation and recovery
+
+Published through official Cloudflare Git builds and verified with two independent anonymous browser sessions. This public repository is the only source repository.
 
 [Operations guide](docs/operations.md) covers actual environments, Cloudflare Git integration, immutable migrations, encrypted seven-day backups, operator review, release locks, incident recovery and scale limits. [Delivery evidence](docs/delivery.md) records actual checks and outstanding validation.
 
