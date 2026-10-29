@@ -1,6 +1,6 @@
 import type { Browser, BrowserContext, BrowserContextOptions } from "@playwright/test";
 
-export async function installTurnstileMock(context: BrowserContext) {
+export async function installTurnstileMock(context: BrowserContext, { autoSolve = true } = {}) {
   await context.route("https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit", (route) => route.fulfill({
     contentType: "application/javascript",
     body: `(() => {
@@ -12,7 +12,7 @@ export async function installTurnstileMock(context: BrowserContext) {
           widgets.set(id, options);
           container.dataset.testWidget = id;
           const token = JSON.stringify({ nonce: crypto.randomUUID(), action: options.action, hostname: location.hostname });
-          setTimeout(() => { if(widgets.has(id)) options.callback(token); }, 20);
+          if (${autoSolve}) setTimeout(() => { if(widgets.has(id)) options.callback(token); }, 20);
           return id;
         },
         remove(id) { widgets.delete(id); }

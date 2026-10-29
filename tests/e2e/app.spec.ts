@@ -291,3 +291,47 @@ test("rejected verification resets the token and preserves the same submission k
   expect(attempts[0].requestKey).toBe(attempts[1].requestKey);
   expect(attempts[0].turnstileToken).not.toBe(attempts[1].turnstileToken);
 });
+
+test("stalled and rejected challenges explain recovery without sending or losing the draft", async ({ page, context }) => {
+  await installTurnstileMock(context, { autoSolve: false });
+  let submissions = 0;
+  page.on("request", (request) => { if (request.url().endsWith("/api/bottles")) submissions++; });
+  await page.goto("/");
+  await page.clock.install();
+  await page.getByRole("button", { name: "Cast a bottle" }).click();
+  await page.getByLabel("Your message").fill("Keep this thought through a slow verification.");
+  await expect(page.locator("[data-test-widget]")).toHaveCount(1);
+  await page.clock.fastForward(46000);
+  await expect(page.getByRole("status")).toContainText("Verification is taking too long");
+  await page.getByRole("button", { name: "Retry verification" }).click();
+  await expect(page.getByRole("status")).toHaveText("Checking your browser…");
+
+  const fire = (event: string, argument?: string) => page.evaluate(({ event, argument }) => {
+    const widgets = (window as unknown as { __turnstileWidgets: Map<string, Record<string, unknown>> }).__turnstileWidgets;
+    for (const widget of widgets.values()) (widget[event] as (argument?: string) => void)(argument);
+  }, { event, argument });
+  await fire("before-interactive-callback");
+  await expect(page.getByRole("status")).toHaveText("Please complete the verification below.");
+  await page.clock.fastForward(46000);
+  await expect(page.getByRole("status")).toHaveText("Please complete the verification below.");
+  await fire("after-interactive-callback");
+  await fire("error-callback", "600010");
+  await expect(page.getByRole("status")).toContainText("Cloudflare could not verify this browser");
+  await expect(page.getByText("Verification code: 600010")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Seal & send" })).toBeDisabled();
+  await expect(page.getByLabel("Your message")).toHaveValue("Keep this thought through a slow verification.");
+  expect(submissions).toBe(0);
+
+  await page.getByRole("button", { name: "Retry verification" }).click();
+  await expect(page.getByText("Verification code: 600010")).toHaveCount(0);
+  await fire("error-callback", "110200");
+  await expect(page.getByRole("status")).toContainText("not configured for this site");
+  await page.getByRole("button", { name: "Retry verification" }).click();
+  await fire("error-callback", "<img src=x onerror=alert(1)>");
+  await expect(page.getByText(/Verification code:/)).toHaveCount(0);
+  await expect(page.locator(".verification img")).toHaveCount(0);
+  expect(await page.evaluate(() => {
+    const widgets = (window as unknown as { __turnstileWidgets: Map<string, Record<string, unknown>> }).__turnstileWidgets;
+    return [...widgets.values()].every(widget => widget["refresh-timeout"] === "manual" && widget["refresh-expired"] === "manual");
+  })).toBe(true);
+});
