@@ -30,7 +30,7 @@ function failureMessage(code: string) {
   if (["110100", "110110", "110200", "400020", "400021", "400070"].includes(code))
     return "Verification is not configured for this site. Please try again later.";
   if (code === "200100" || code === "110600")
-    return "Verification timed out. Check your device’s date and time, then reload this page.";
+    return "Verification timed out. Check your device’s date and time, then retry.";
   if (code === "200500")
     return "The verification service could not load. Check your connection or try another browser.";
   if (/^(300|600)/.test(code))
