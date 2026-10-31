@@ -35,7 +35,7 @@ Drift is a live anonymous message-in-a-bottle website. Keep changes small, prese
 
 - Node 24, `npm ci` when dependencies are missing; do not update dependencies as incidental cleanup.
 - `npm run verify` is the shared local/CI gate: documentation paths, types, lint, unit/D1 tests, migration checks, then E2E (which builds the app and starts its own isolated local Worker).
-- `npm run check:migrations` needs `origin/main`; fetch that reference if missing/stale. Do not treat a missing baseline as an empty schema.
+- `npm run check:migrations` needs `origin/main`; fetch that reference only when the user has authorized the relevant remote synchronization. If the baseline is missing or stale and fetch is not authorized, report the check as blocked; do not treat it as an empty schema.
 - Routine runs write to ignored `artifacts/`, `dist/` and `.wrangler/`. `docs/evidence/` contains reviewed historical evidence; do not overwrite it during routine tests or profiling. Promote selected results deliberately with environment, time, source SHA and limitations.
 - No cloud credentials are needed for local checks. Tests and capacity fixtures must remain local; never point the suite at production.
 
@@ -51,3 +51,8 @@ Drift is a live anonymous message-in-a-bottle website. Keep changes small, prese
 ## Finish
 
 Inspect `git diff --check`, the full relevant diff and final status. Report actual checks, remaining limits and whether changes are local, committed, pushed or deployed. A clean checkout, passing local test or merged PR alone does not prove a production release. Use the evidence sequence in [maintenance](docs/maintenance.md).
+
+## Browser tool selection
+
+- Prefer Ego Browser for exploratory navigation, visual review and interactive checks when available. Use Playwright for repeatable regression, CI, isolation, request interception or other automation requiring its APIs; combine tools when useful. If Ego is unavailable, use a suitable existing browser tool.
+- Keep this repository's required browser commands, versions, profiles and safety boundaries; an exploratory check does not replace required automated tests. Do not alter real user data or production state for testing. Report the tools, coverage and any untested paths.
