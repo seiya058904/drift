@@ -136,7 +136,7 @@ React + TypeScript + Vite, CSS design tokens, lazy GSAP rituals and native Web A
 
 D1 stores messages, expiring sessions, draw credentials, deduplication records and rate limits. Sampling traverses every eligible candidate with weight `1 / (1 + exposure_count)^1.5`. D1 triggers ensure concurrent and repeated opens count only once. Exposure counts never reach the browser.
 
-All mutations require POST, JSON, exact Origin and a session-bound CSRF token. Remote cookies use `__Host-`, HttpOnly, Secure, SameSite=Strict and Path=/. Content responses use no-store. Raw IP addresses are not stored; a daily rotating keyed hash supports IP limits. Anonymous session links expire after 24 hours and are cleaned hourly. Drift has no audience analytics or persistent visitor profile. Turnstile processes browser/network signals for abuse prevention; protected handlers verify success, action and the exact configured hostname before creating a bottle or report.
+All mutations require POST, JSON, exact Origin and a session-bound CSRF token. Remote cookies use `__Host-`, HttpOnly, Secure, SameSite=Strict and Path=/. Content responses use no-store. Raw IP addresses are not stored; a daily rotating keyed hash supports IP limits. Anonymous session links expire after 24 hours and are cleaned hourly. Cloudflare Web Analytics measures aggregate visits and page performance on the production site; Drift does not maintain a persistent visitor profile. Turnstile processes browser/network signals for abuse prevention; protected handlers verify success, action and the exact configured hostname before creating a bottle or report.
 
 </details>
 
