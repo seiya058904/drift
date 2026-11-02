@@ -24,6 +24,10 @@ The Preview block explicitly binds preview D1. Each build sets one exact preview
 
 After creating the Worker resource, run `node scripts/provision-secrets.mjs` once with the operator's restricted secret file. It uploads independent production and Preview base secrets through Wrangler stdin, without logging values. This is infrastructure configuration; app publication still belongs exclusively to official Git builds.
 
+## Web Analytics
+
+The production hostname loads the Cloudflare Web Analytics beacon for aggregate visits and page performance. Preview and local hosts do not load it. The public site token is not an API credential. The static asset CSP allows the beacon script and its ingestion endpoint; keep the privacy notice aligned with this behavior. After a release, verify the live beacon and dashboard data without submitting or opening bottles.
+
 ## Turnstile
 
 Managed widgets protect `submit_bottle` -> `POST /api/bottles` and `report_bottle` -> `POST /api/report`. Home, find and read do not load Turnstile. The script is loaded directly from Cloudflare only when a protected form opens; CSP permits that exact provider for script/frame/connect sources. Privacy copy describes the third-party browser/network processing; Siteverify receives no message text or explicit raw-IP parameter.

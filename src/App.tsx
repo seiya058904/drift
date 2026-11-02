@@ -576,8 +576,9 @@ export default function App() {
                   A secure, essential cookie lasts 24 hours. It helps prevent
                   repeats and abuse. Session links, reading and report
                   deduplication records are removed after 24 hours, at the next
-                  hourly cleanup. We never show reading counts. Drift does not
-                  use audience analytics, advertising trackers or a persistent
+                  hourly cleanup. We never show reading counts. Drift uses
+                  Cloudflare Web Analytics for aggregate visits and page
+                  performance, without advertising trackers or a persistent
                   visitor profile.
                 </p>
                 <p>
