@@ -1,7 +1,8 @@
 import { readFile, writeFile, unlink } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { cloudflare, query } from "./cloudflare.mjs";
+import { cloudflare } from "./cloudflare.mjs";
+import { acquireOperationLock, releaseOperationLock } from "./operations-lock.mjs";
 import { backup, wrangler } from "./backup.mjs";
 import {
   assertChecks,
@@ -99,15 +100,7 @@ if (!secretNames.includes("TURNSTILE_SECRET"))
 // A separate operational D1 holds an atomic lock. It contains no user messages.
 // Locks never expire automatically: a killed build cannot later overtake another release.
 const owner = `${sha}:${randomUUID()}`;
-const acquired = await query(
-  config.operationsDatabase,
-  "INSERT OR IGNORE INTO release_lock(name,owner,acquired_at) VALUES(?,?,?) RETURNING owner",
-  [environment, owner, Math.floor(Date.now() / 1000)],
-);
-if (!acquired[0].results.length)
-  throw Error(
-    "Another release holds the lock; inspect its build before retrying.",
-  );
+await acquireOperationLock(config.operationsDatabase, environment, owner);
 const generated = "cloudflare.generated.json";
 try {
   const result = await releaseStages({
@@ -169,9 +162,5 @@ try {
   );
 } finally {
   await unlink(generated).catch(() => {});
-  await query(
-    config.operationsDatabase,
-    "DELETE FROM release_lock WHERE name=? AND owner=?",
-    [environment, owner],
-  );
+  await releaseOperationLock(config.operationsDatabase, environment, owner);
 }

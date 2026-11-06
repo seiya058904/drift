@@ -5,6 +5,7 @@ import { build } from "esbuild";
 import { Miniflare, Response as MiniflareResponse, convertV4MiniflareOptions } from "miniflare";
 import { createSiteverifyFixture, fixtureToken } from "./turnstile-fixture";
 import { cleanup, type Env } from "../worker/index";
+import { LIMITS } from "../worker/rules";
 let mf: Miniflare, db: D1Database;
 const origin = "https://drift.test";
 type Client = { cookie: string; csrf: string; ip: string };
@@ -54,6 +55,11 @@ beforeEach(async () => {
   );
 });
 async function client(ip: string = crypto.randomUUID()): Promise<Client> {
+  const c = await bootstrapClient(ip);
+  assert.equal((await post(c, "session", {})).status, 200);
+  return c;
+}
+async function bootstrapClient(ip: string): Promise<Client> {
   const r = await mf.dispatchFetch(`${origin}/api/bootstrap`);
   const cookie = r.headers.get("set-cookie")!;
   assert.match(
@@ -66,7 +72,6 @@ async function client(ip: string = crypto.randomUUID()): Promise<Client> {
     csrf: ((await r.json()) as { csrf: string }).csrf,
     ip,
   };
-  assert.equal((await post(c, "session", {})).status, 200);
   return c;
 }
 function post(
@@ -115,6 +120,45 @@ async function draw(c: Client) {
     await post(c, "draw", { requestKey: crypto.randomUUID() }),
   );
 }
+test("full IP quota rejects new sessions without changing either counter", async () => {
+  const ip = "synthetic-shared-ip";
+  await client(ip);
+  await db.prepare("UPDATE rate_limits SET count=? WHERE key LIKE 'session:%:i:%'").bind(LIMITS.session.count).run();
+  const beforeRows = await db.prepare("SELECT * FROM rate_limits ORDER BY key").all();
+  const denied = await bootstrapClient(ip);
+  assert.equal((await post(denied, "session", {})).status, 429);
+  assert.equal((await post(denied, "session", {})).status, 429);
+  const afterRows = await db.prepare("SELECT * FROM rate_limits ORDER BY key").all();
+  assert.deepEqual(afterRows.results, beforeRows.results);
+  assert.equal((await db.prepare("SELECT count(*) AS n FROM sessions").first<{ n: number }>())?.n, 1);
+});
+
+test("full session quota rejects a new IP without creating its counter", async () => {
+  const c = await bootstrapClient("synthetic-new-ip");
+  const id = c.cookie.split("=")[1].split(".")[0];
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(id));
+  const sessionId = Buffer.from(digest).toString("hex");
+  const bucket = Math.floor(Date.now() / 1000 / LIMITS.session.seconds);
+  await db.prepare("INSERT INTO rate_limits(key,count,expires_at) VALUES(?,?,?)")
+    .bind(`session:${bucket}:s:${sessionId}`, LIMITS.session.count, (bucket + 1) * LIMITS.session.seconds).run();
+  const beforeRows = await db.prepare("SELECT * FROM rate_limits ORDER BY key").all();
+  assert.equal((await post(c, "session", {})).status, 429);
+  assert.deepEqual((await db.prepare("SELECT * FROM rate_limits ORDER BY key").all()).results, beforeRows.results);
+});
+
+test("concurrent session admissions consume exactly the last shared IP slot", async () => {
+  const ip = "synthetic-last-slot";
+  await client(ip);
+  await db.prepare("UPDATE rate_limits SET count=? WHERE key LIKE 'session:%:i:%'").bind(LIMITS.session.count - 1).run();
+  const clients = await Promise.all(Array.from({ length: 4 }, () => bootstrapClient(ip)));
+  const responses = await Promise.all(clients.map((c) => post(c, "session", {})));
+  assert.deepEqual(responses.map((r) => r.status).sort(), [200, 429, 429, 429]);
+  const rows = (await db.prepare("SELECT key,count FROM rate_limits").all<{ key: string; count: number }>()).results;
+  assert.equal(rows.length, 3);
+  assert.equal(rows.find((row) => row.key.includes(":i:"))?.count, LIMITS.session.count);
+  assert.equal((await db.prepare("SELECT count(*) AS n FROM sessions").first<{ n: number }>())?.n, 2);
+});
+
 test("complete flow, no body in draw, author exclusion, plain text, read dedup, no exposure leak", async () => {
   const author = await client(),
     reader = await client();

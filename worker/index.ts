@@ -159,15 +159,27 @@ async function limit(
   const rule = LIMITS[kind],
     bucket = Math.floor(now() / rule.seconds),
     expires = (bucket + 1) * rule.seconds;
-  const keys = [`s:${session.id}`, `i:${await ipHash(request, env)}`];
-  const result = await env.DB.batch(
-    keys.map((key) =>
-      env.DB.prepare(
-        "INSERT INTO rate_limits(key,count,expires_at) VALUES(?,1,?) ON CONFLICT(key) DO UPDATE SET count=count+1 WHERE count < ? RETURNING count",
-      ).bind(`${kind}:${bucket}:${key}`, expires, rule.count),
-    ),
-  );
-  if (result.some((r) => !r.results.length))
+  // Admit both keys or neither, using counters from before either UPSERT.
+  const result = await env.DB.prepare(`
+    WITH requested(key) AS (VALUES (?),(?)),
+    admission AS MATERIALIZED (
+      SELECT NOT EXISTS (
+        SELECT 1 FROM rate_limits
+        WHERE key IN (SELECT key FROM requested) AND count >= ?
+      ) AS allowed
+    )
+    INSERT INTO rate_limits(key,count,expires_at)
+    SELECT key,1,? FROM requested CROSS JOIN admission WHERE allowed
+    ON CONFLICT(key) DO UPDATE SET count=count+1 RETURNING count
+  `)
+    .bind(
+      `${kind}:${bucket}:s:${session.id}`,
+      `${kind}:${bucket}:i:${await ipHash(request, env)}`,
+      rule.count,
+      expires,
+    )
+    .all();
+  if (result.results.length !== 2)
     throw new HttpError(
       429,
       "rate_limit",

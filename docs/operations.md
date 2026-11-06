@@ -6,7 +6,7 @@ For local checks, generated files and AI handoff, see [maintenance](maintenance.
 
 `deployment.json` records actual resource IDs. Production and preview D1 IDs must differ. Local/CI uses Miniflare or Wrangler local D1 only. The application has no remote seed/reset command. Synthetic fixtures are confined to tests and preview.
 
-Production: `drift-production`. Shared trusted PR previews: `drift-preview`. `drift-operations` holds only the atomic release lock, with no user content. The private `drift-backups` KV namespace holds encrypted database exports with a 604800-second TTL. No paid plan is enabled by these scripts.
+Production: `drift-production`. Shared trusted PR previews: `drift-preview`. `drift-operations` holds the shared atomic release/recovery lock, with no user content. The private `drift-backups` KV namespace holds encrypted database exports with a 604800-second TTL. No paid plan is enabled by these scripts.
 
 The operations database is bootstrapped once with `CREATE TABLE release_lock (name TEXT PRIMARY KEY, owner TEXT NOT NULL, acquired_at INTEGER NOT NULL)`. This table is independent of application migrations, allowing even the first application migration to run under a lock. A crashed build leaves its lock in place; confirm the matching build has stopped before deleting that exact lock row. Never auto-expire a deployment lock.
 
@@ -69,6 +69,31 @@ On 2026-10-29 (Asia/Singapore), the owner explicitly authorized 15 editorial ope
 Code regression: choose a known compatible Worker version and roll back code, leaving schema in place. Data repair: prefer a reviewed forward migration.
 
 Database restore is a destructive incident action, never part of automatic release. Pause writes, verify maintenance behavior, record the affected time range and expected data loss, and approve one exact bookmark. The operator then sets `DRIFT_WRITES_PAUSED_CONFIRMED=yes` and `DRIFT_INCIDENT_APPROVAL=restore:<database-id>:<bookmark>` and runs `node scripts/restore.mjs production <bookmark> <database-id>`. The script backs up current state before restoring and removes expired session records afterwards. Validate integrity, foreign keys, schema, representative message counts and two independent anonymous sessions before resuming writes. Rehearse on an isolated synthetic database first.
+
+Restore acquires the same environment lock as release **before backup**. A busy
+lock blocks recovery without touching the application database. Production and
+preview have separate lock rows. The lock lives in the independent operations
+database, so restoring application data cannot roll it back.
+
+Record the printed `restore:<uuid>` owner. If backup fails before restore is
+invoked, the script releases only its own lock. Once restore is invoked, both
+success and failure retain the lock: a failed CLI response may follow a completed
+provider operation. Automatic release remains blocked during manual verification.
+Do not rerun restore or clear a retained lock until the original process has
+stopped and the actual database outcome is known. A killed process or ambiguous
+lock-acquisition response also requires inspecting the exact existing lock.
+
+Keep the lock while checking integrity, foreign keys, schema compatibility and
+representative counts. During the separately approved resumption, verify two
+anonymous sessions while still holding the lock; return to maintenance if they
+fail. A normal release must not be used to remove the write-pause setting.
+Only after the operator has verified the recovered state and the write-pause
+decision, set `DRIFT_RESTORE_VERIFIED=complete-restore:<database-id>:<restore-owner>`
+and run `node scripts/complete-restore.mjs production <database-id> <restore-owner>`
+(or the corresponding preview command). It requires the exact environment,
+database and owner and deletes only that lock row. This is an operator
+attestation, not an automatic integrity check or permission to restore production.
+Never auto-expire or unconditionally delete a recovery lock.
 
 ## Capacity
 
