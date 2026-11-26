@@ -1,6 +1,6 @@
 # Working in Drift
 
-Live anonymous message-in-a-bottle site. Start with [README](README.md), [maintenance](docs/maintenance.md) (checks & closeout), and [operations](docs/operations.md) before cloud/moderation/migration/recovery work ([Delivery](docs/delivery.md) is dated evidence, not live state). Use `codex/` for new work branches.
+Live anonymous message-in-a-bottle site. Start with [README](README.md), [maintenance](docs/maintenance.md) (checks & closeout), and [operations](docs/operations.md) before cloud/moderation/migration/recovery work ([Delivery](docs/delivery.md) is dated evidence, not live state). Use `codex/` for new work branches. Inspect `git status` before editing and keep unrelated user changes isolated.
 
 ## Contracts
 - English UI; plain-text Unicode bottles; no accounts, replies, history, social graph, or read receipts. Read thresholds from `worker/rules.ts`.
